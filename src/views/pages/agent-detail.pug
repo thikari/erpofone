@@ -26,7 +26,7 @@ block content
         span(class="text-xs text-gray-400") Cost today
 
   div(class="flex gap-0 border-b border-gray-200 mb-5")
-    each tab in ['overview','control','skills','settings']
+    each tab in ['overview','control','skills','settings','server']
       button(class=`dtab${tab === 'overview' ? ' active' : ''}` data-tab=tab data-tab-group="agent")= tab.charAt(0).toUpperCase() + tab.slice(1)
 
   div(id="pane-overview" data-pane data-tab-group="agent")
@@ -182,6 +182,51 @@ block content
                 option(value=c selected=agent.color===c)= c.charAt(0).toUpperCase()+c.slice(1)
           button(class="btn btn-teal" type="submit") Save changes
 
+  div(id="pane-server" class="hidden" data-pane data-tab-group="agent")
+    div(class="grid grid-cols-2 gap-5")
+
+      //- ── Process config ──
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Process config
+        div(class="card-body")
+          form#server-config-form(class="flex flex-col gap-4")
+            div
+              label(class="label") Working directory
+              input#srv-workDir(class="field" type="text" name="workDir" value=agent.workDir placeholder="/home/agents/myapp")
+            div
+              label(class="label") Start command
+              input#srv-startCommand(class="field" type="text" name="startCommand" value=agent.startCommand placeholder="e.g. node index.js")
+            div
+              label(class="label") Environment variables
+              textarea#srv-envVars(class="field font-mono" name="envVars" rows="4" placeholder="KEY=VALUE\nANOTHER=value")= agent.envVars
+            div
+              label(class="label") Extra log paths (one per line)
+              textarea#srv-logPaths(class="field font-mono" name="logPaths" rows="3" placeholder="/var/log/agent.log\n/home/agent/state.json")= (agent.logPaths || []).join('\n')
+            div(class="flex gap-2 items-center")
+              button#btn-save-server-config(class="btn btn-teal" type="submit") Save config
+              div#server-config-result(class="text-xs text-gray-400 hidden")
+
+      //- ── Process control ──
+      div(class="flex flex-col gap-5")
+        div(class="card")
+          div(class="card-header"): span(class="card-title") Process control
+          div(class="card-body flex flex-col gap-3")
+            div(class="flex items-center gap-3")
+              div#proc-status-dot(class="w-2.5 h-2.5 rounded-full bg-gray-300" style="flex-shrink:0")
+              div
+                span#proc-status-text(class="text-sm font-semibold text-gray-700") Stopped
+                span#proc-pid-text(class="text-xs text-gray-400 ml-2")
+            div(class="flex gap-2")
+              button#btn-proc-start(class="btn" style="background:#16a34a;color:#fff;border-color:#16a34a") ▶ Start
+              button#btn-proc-stop(class="btn btn-gray") ■ Stop
+
+        div(class="card flex-1 flex flex-col" style="min-height:0")
+          div(class="card-header"): span(class="card-title") Live output
+          div#process-log(
+            class="flex-1 overflow-y-auto font-mono text-xs p-3 rounded-b-xl"
+            style="height:300px;background:#111827;color:#4ade80;line-height:1.5"
+          )
+
 block overlays
   div(class="panel-overlay" id="panel-skill-lib")
     div(class="slide-panel")
@@ -289,3 +334,131 @@ block scripts
       result.textContent = d.ok ? ('✓ ' + d.message) : ('✗ ' + (d.error || 'Failed'));
       this.textContent = '▶ Wake / run heartbeat'; this.disabled = false;
     });
+
+  script.
+    // ── Server tab ──
+    (function () {
+      var agentId = '!{agent._id.toString()}';
+      var procLog   = document.getElementById('process-log');
+      var statusDot = document.getElementById('proc-status-dot');
+      var statusTxt = document.getElementById('proc-status-text');
+      var pidTxt    = document.getElementById('proc-pid-text');
+      var sseSource = null;
+
+      function appendLog(line) {
+        var el = document.createElement('div');
+        el.textContent = line;
+        procLog.appendChild(el);
+        // Keep last 200 lines visible
+        while (procLog.children.length > 200) procLog.removeChild(procLog.firstChild);
+        procLog.scrollTop = procLog.scrollHeight;
+      }
+
+      function setStatus(running, pid) {
+        if (running) {
+          statusDot.style.background = '#16a34a';
+          statusTxt.textContent = 'Running';
+          pidTxt.textContent = pid ? '(PID ' + pid + ')' : '';
+        } else {
+          statusDot.style.background = '#d1d5db';
+          statusTxt.textContent = 'Stopped';
+          pidTxt.textContent = '';
+        }
+      }
+
+      function connectSSE() {
+        if (sseSource) { sseSource.close(); sseSource = null; }
+        sseSource = new EventSource('/api/processes/' + agentId + '/stream');
+
+        sseSource.addEventListener('history', function (e) {
+          try { appendLog(JSON.parse(e.data).line); } catch {}
+        });
+        sseSource.addEventListener('line', function (e) {
+          try { appendLog(JSON.parse(e.data).line); } catch {}
+        });
+        sseSource.onerror = function () {
+          // SSE will reconnect automatically
+        };
+      }
+
+      // Load initial status
+      fetch('/api/processes/' + agentId + '/status')
+        .then(function (r) { return r.json(); })
+        .then(function (d) { setStatus(d.running, d.pid); })
+        .catch(function () {});
+
+      // Connect SSE when Server tab becomes active
+      document.querySelectorAll('[data-tab][data-tab-group="agent"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (this.dataset.tab === 'server' && !sseSource) {
+            connectSSE();
+          }
+        });
+      });
+
+      // Start button
+      document.getElementById('btn-proc-start').addEventListener('click', async function () {
+        this.disabled = true; this.textContent = 'Starting…';
+        try {
+          const r = await fetch('/api/processes/' + agentId + '/start', { method: 'POST' });
+          const d = await r.json();
+          if (d.ok) {
+            setStatus(true, d.pid);
+            if (!sseSource) connectSSE();
+          } else {
+            appendLog('[error] ' + (d.error || 'Failed to start'));
+          }
+        } catch (e) {
+          appendLog('[error] ' + e.message);
+        }
+        this.disabled = false; this.textContent = '▶ Start';
+      });
+
+      // Stop button
+      document.getElementById('btn-proc-stop').addEventListener('click', async function () {
+        this.disabled = true; this.textContent = 'Stopping…';
+        try {
+          const r = await fetch('/api/processes/' + agentId + '/stop', { method: 'POST' });
+          const d = await r.json();
+          if (d.ok) {
+            setStatus(false, null);
+          } else {
+            appendLog('[error] ' + (d.error || 'Failed to stop'));
+          }
+        } catch (e) {
+          appendLog('[error] ' + e.message);
+        }
+        this.disabled = false; this.textContent = '■ Stop';
+      });
+
+      // Save config form
+      document.getElementById('server-config-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const resultEl = document.getElementById('server-config-result');
+        const btn = document.getElementById('btn-save-server-config');
+        btn.textContent = 'Saving…'; btn.disabled = true;
+
+        const logPathsRaw = document.getElementById('srv-logPaths').value.trim();
+        const logPaths = logPathsRaw ? logPathsRaw.split('\n').map(function (l) { return l.trim(); }).filter(Boolean) : [];
+
+        try {
+          const r = await fetch('/agents/' + agentId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workDir:      document.getElementById('srv-workDir').value.trim(),
+              startCommand: document.getElementById('srv-startCommand').value.trim(),
+              envVars:      document.getElementById('srv-envVars').value,
+              logPaths,
+            }),
+          });
+          const d = await r.json();
+          resultEl.classList.remove('hidden');
+          resultEl.textContent = d._id ? '✓ Saved' : ('✗ ' + (d.error || 'Failed'));
+        } catch (err) {
+          resultEl.classList.remove('hidden');
+          resultEl.textContent = '✗ ' + err.message;
+        }
+        btn.textContent = 'Save config'; btn.disabled = false;
+      });
+    })();

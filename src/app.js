@@ -31,10 +31,12 @@ app.use('/crons',     require('./routes/crons'));
 app.use('/reports',   require('./routes/reports'));
 app.use('/settings',  require('./routes/settings'));
 app.use('/connect',    require('./routes/connect'));
-app.use('/api/ingest', require('./routes/api/ingest'));
-app.use('/api/sync',    require('./routes/api/sync'));
-app.use('/api/control', require('./routes/api/control'));
-app.use('/api/live',    require('./routes/api/live'));
+app.use('/api/ingest',    require('./routes/api/ingest'));
+app.use('/api/sync',     require('./routes/api/sync'));
+app.use('/api/control',  require('./routes/api/control'));
+app.use('/api/live',     require('./routes/api/live'));
+app.use('/chat',         require('./routes/chat'));
+app.use('/api/processes', require('./routes/api/processes'));
 
 // ── 404 ──
 app.use((req, res) => {

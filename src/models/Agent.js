@@ -13,6 +13,11 @@ const AgentSchema = new Schema({
   tasksTotal:  { type: Number, default: 0 },
   successRate: { type: Number, default: 100, min: 0, max: 100 },
   costToday:   { type: Number, default: 0 },
+  workDir:      { type: String, default: '' },
+  startCommand: { type: String, default: '' },
+  logPaths:     [{ type: String }],
+  envVars:      { type: String, default: '' },
+  pid:          { type: Number, default: null },
 }, { timestamps: true });
 
 module.exports = model('Agent', AgentSchema);

@@ -1,0 +1,278 @@
+extends ../layout
+
+block content
+  - // Chat fills the available main area
+  if !hasApiKey
+    div(class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3")
+      span(class="text-lg flex-shrink-0") ⚠️
+      div
+        div(class="text-sm font-semibold text-amber-800 mb-1") OpenRouter API key not configured
+        div(class="text-xs text-amber-700")
+          | Add <code class="font-mono bg-amber-100 px-1 rounded">OPENROUTER_API_KEY=your_key</code> to your
+          |  <code class="font-mono bg-amber-100 px-1 rounded">.env</code> file, then restart the server.
+          |  Get a key at <a href="https://openrouter.ai/keys" target="_blank" class="underline">openrouter.ai/keys</a>.
+
+  div(class="flex gap-4" style="height:calc(100vh - 140px)")
+
+    //- ── Left sidebar ──
+    div(class="flex-shrink-0 flex flex-col gap-3" style="width:200px")
+      div(class="card flex flex-col gap-3 p-4")
+        div
+          label(class="label") Agent
+          select#chat-agent(class="field")
+            option(value="") No agent / direct
+            each agent in agents
+              option(value=agent._id.toString())= agent.name + ' — ' + agent.role
+
+        div
+          label(class="label") Model
+          select#chat-model(class="field")
+            each m in defaultModels
+              option(value=m)= m
+
+      button#btn-clear-chat(class="btn btn-gray w-full") Clear chat
+
+    //- ── Main chat area ──
+    div(class="flex flex-col flex-1 min-w-0")
+      //- Message thread
+      div#messages(class="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 mb-3")
+        //- Messages injected by JS
+
+      //- Input area
+      div(class="card p-3")
+        div(class="flex gap-2 items-end")
+          textarea#chat-input(
+            class="field flex-1 resize-none"
+            rows="3"
+            placeholder="Message… (Enter to send, Shift+Enter for newline)"
+          )
+          button#btn-send(class="btn btn-teal flex-shrink-0" style="align-self:flex-end") Send
+
+block scripts
+  style.
+    #messages { scroll-behavior: smooth; }
+
+    .msg-user {
+      align-self: flex-end;
+      max-width: 75%;
+      background: #0d9488;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 16px 16px 4px 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg-assistant {
+      align-self: flex-start;
+      max-width: 80%;
+      background: #fff;
+      border: 1px solid #e5e7f0;
+      color: #1f2937;
+      padding: 10px 14px;
+      border-radius: 16px 16px 16px 4px;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .msg-assistant.streaming::after {
+      content: '▌';
+      animation: blink .7s step-start infinite;
+      color: #14b8a6;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .msg-role-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #9ca3af;
+      margin-bottom: 2px;
+      padding: 0 2px;
+    }
+
+    .msg-wrap { display: flex; flex-direction: column; }
+    .msg-wrap.user  { align-items: flex-end; }
+    .msg-wrap.asst  { align-items: flex-start; }
+
+    #chat-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(20,184,166,0.25); }
+
+  script.
+    (function () {
+      var messages = [];   // { role: 'user'|'assistant', content: '' }
+      var streaming = false;
+      var currentAssistantEl = null;
+
+      var messagesEl  = document.getElementById('messages');
+      var inputEl     = document.getElementById('chat-input');
+      var sendBtn     = document.getElementById('btn-send');
+      var clearBtn    = document.getElementById('btn-clear-chat');
+      var agentSelect = document.getElementById('chat-agent');
+      var modelSelect = document.getElementById('chat-model');
+
+      function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function appendMessage(role, text) {
+        var wrap = document.createElement('div');
+        wrap.className = 'msg-wrap ' + (role === 'user' ? 'user' : 'asst');
+
+        var label = document.createElement('div');
+        label.className = 'msg-role-label';
+        label.textContent = role === 'user' ? 'You' : (agentSelect.options[agentSelect.selectedIndex].text !== 'No agent / direct' ? agentSelect.options[agentSelect.selectedIndex].text.split(' — ')[0] : 'Assistant');
+        wrap.appendChild(label);
+
+        var bubble = document.createElement('div');
+        bubble.className = role === 'user' ? 'msg-user' : 'msg-assistant';
+        bubble.textContent = text || '';
+        wrap.appendChild(bubble);
+
+        messagesEl.appendChild(wrap);
+        scrollToBottom();
+        return bubble;
+      }
+
+      function startAssistantMessage() {
+        var wrap = document.createElement('div');
+        wrap.className = 'msg-wrap asst';
+
+        var label = document.createElement('div');
+        label.className = 'msg-role-label';
+        label.textContent = agentSelect.options[agentSelect.selectedIndex].value
+          ? agentSelect.options[agentSelect.selectedIndex].text.split(' — ')[0]
+          : 'Assistant';
+        wrap.appendChild(label);
+
+        var bubble = document.createElement('div');
+        bubble.className = 'msg-assistant streaming';
+        bubble.textContent = '';
+        wrap.appendChild(bubble);
+
+        messagesEl.appendChild(wrap);
+        scrollToBottom();
+        return bubble;
+      }
+
+      async function send() {
+        if (streaming) return;
+        var text = inputEl.value.trim();
+        if (!text) return;
+
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+
+        // Add to conversation
+        messages.push({ role: 'user', content: text });
+        appendMessage('user', text);
+
+        // Start assistant bubble
+        currentAssistantEl = startAssistantMessage();
+        streaming = true;
+        sendBtn.disabled = true;
+        sendBtn.textContent = '…';
+
+        var body = {
+          model:    modelSelect.value,
+          messages: messages.slice(),
+          agentId:  agentSelect.value || undefined,
+        };
+
+        try {
+          var response = await fetch('/chat/stream', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+          });
+
+          if (!response.ok) {
+            throw new Error('Request failed: ' + response.status);
+          }
+
+          var reader  = response.body.getReader();
+          var decoder = new TextDecoder();
+          var buffer  = '';
+          var assistantContent = '';
+
+          while (true) {
+            var result = await reader.read();
+            if (result.done) break;
+
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            var eventType = null;
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i].trim();
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                var rawData = line.slice(6).trim();
+                if (!rawData) continue;
+                try {
+                  var parsed = JSON.parse(rawData);
+                  if (eventType === 'chunk' && parsed.text) {
+                    assistantContent += parsed.text;
+                    currentAssistantEl.textContent = assistantContent;
+                    scrollToBottom();
+                  } else if (eventType === 'done') {
+                    messages.push({ role: 'assistant', content: assistantContent });
+                    currentAssistantEl.classList.remove('streaming');
+                  } else if (eventType === 'error') {
+                    currentAssistantEl.textContent = '⚠ ' + (parsed.message || 'An error occurred');
+                    currentAssistantEl.classList.remove('streaming');
+                    currentAssistantEl.style.color = '#dc2626';
+                  }
+                } catch (e) {
+                  // Malformed data line — skip
+                }
+                eventType = null;
+              }
+            }
+          }
+
+          // Ensure streaming cursor is removed
+          if (currentAssistantEl) currentAssistantEl.classList.remove('streaming');
+
+        } catch (err) {
+          if (currentAssistantEl) {
+            currentAssistantEl.textContent = '⚠ ' + err.message;
+            currentAssistantEl.classList.remove('streaming');
+            currentAssistantEl.style.color = '#dc2626';
+          }
+        }
+
+        streaming = false;
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+        inputEl.focus();
+      }
+
+      sendBtn.addEventListener('click', send);
+
+      inputEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          send();
+        }
+      });
+
+      // Auto-resize textarea
+      inputEl.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+      });
+
+      clearBtn.addEventListener('click', function () {
+        messages = [];
+        messagesEl.innerHTML = '';
+      });
+    })();
