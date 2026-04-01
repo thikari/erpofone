@@ -1,21 +1,10 @@
 extends ../layout
 
 block content
-  - // Chat fills the available main area
-  if !hasApiKey
-    div(class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3")
-      span(class="text-lg flex-shrink-0") ⚠️
-      div
-        div(class="text-sm font-semibold text-amber-800 mb-1") OpenRouter API key not configured
-        div(class="text-xs text-amber-700")
-          | Add <code class="font-mono bg-amber-100 px-1 rounded">OPENROUTER_API_KEY=your_key</code> to your
-          |  <code class="font-mono bg-amber-100 px-1 rounded">.env</code> file, then restart the server.
-          |  Get a key at <a href="https://openrouter.ai/keys" target="_blank" class="underline">openrouter.ai/keys</a>.
-
   div(class="flex gap-4" style="height:calc(100vh - 140px)")
 
     //- ── Left sidebar ──
-    div(class="flex-shrink-0 flex flex-col gap-3" style="width:200px")
+    div(class="flex-shrink-0 flex flex-col gap-3" style="width:210px")
       div(class="card flex flex-col gap-3 p-4")
         div
           label(class="label") Agent
@@ -27,8 +16,17 @@ block content
         div
           label(class="label") Model
           select#chat-model(class="field")
-            each m in defaultModels
-              option(value=m)= m
+            each group in groups
+              optgroup(label=`${group.hasKey ? '✓' : '✗'} ${group.label}`)
+                each m in group.models
+                  option(value=m.id disabled=!group.hasKey)= m.name
+
+      div(class="card p-3")
+        div(class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide") API keys
+        each group in groups
+          div(class="flex items-center justify-between py-1")
+            span(class="text-xs text-gray-600")= group.label.split(' ')[0]
+            span(class=`text-xs font-mono font-semibold ${group.hasKey ? 'text-green-600' : 'text-red-400'}`)= group.hasKey ? '✓ set' : '✗ missing'
 
       button#btn-clear-chat(class="btn btn-gray w-full") Clear chat
 
