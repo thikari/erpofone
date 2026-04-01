@@ -1,0 +1,453 @@
+extends ../layout
+
+block content
+
+  div(class="mb-6")
+    h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Settings
+    p(class="text-sm text-gray-500") Workspace configuration, API keys, and tools
+
+  div(class="flex gap-0 border-b border-gray-200 mb-6")
+    each tab in [{val:'general',label:'General'},{val:'api-keys',label:'API Keys'},{val:'tools',label:'Tools'},{val:'developer',label:'Developer'}]
+      button(class="stab" data-stab=tab.val)= tab.label
+
+  //- ══════════════════════════════
+  //- GENERAL
+  //- ══════════════════════════════
+  div(id="spane-general" data-spane)
+    div(class="grid grid-cols-2 gap-5 max-w-3xl")
+
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Workspace
+        div(class="card-body flex flex-col gap-4")
+          div
+            label(class="label") Workspace name
+            input(class="field" type="text" value="TR INC")
+          div
+            label(class="label") Default model
+            select(class="field")
+              option(value="claude-opus-4-6") claude-opus-4-6
+              option(value="claude-sonnet-4-6" selected) claude-sonnet-4-6
+              option(value="claude-haiku-4-5") claude-haiku-4-5
+          div
+            label(class="label") Timezone
+            select(class="field")
+              option(value="Europe/Berlin" selected) Europe/Berlin
+              option(value="UTC") UTC
+              option(value="America/New_York") America/New_York
+              option(value="America/Los_Angeles") America/Los_Angeles
+          button(class="btn btn-teal" style="align-self:flex-start") Save changes
+
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Account
+        div(class="card-body flex flex-col gap-4")
+          div(class="flex items-center gap-3 p-3 bg-main-bg rounded-lg")
+            div(class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)") T
+            div
+              span(class="block text-sm font-semibold text-gray-900") Tobias Rohmann
+              span(class="text-xs text-gray-500") tobias@trohmann.com
+          div
+            label(class="label") Display name
+            input(class="field" type="text" value="Tobi")
+          div
+            label(class="label") Email
+            input(class="field" type="email" value="tobias@trohmann.com")
+          button(class="btn btn-teal" style="align-self:flex-start") Save changes
+
+  //- ══════════════════════════════
+  //- API KEYS
+  //- ══════════════════════════════
+  div(id="spane-api-keys" data-spane class="hidden")
+    div(class="flex items-center justify-between mb-4")
+      p(class="text-sm text-gray-500") Keys are stored securely and used by agents at runtime.
+      button(class="btn btn-teal" data-modal-open="modal-add-key") + Add API key
+
+    div(class="card max-w-3xl")
+      if apiKeys.length === 0
+        div(class="p-10 text-center")
+          p(class="text-3xl mb-2") 🔑
+          p(class="text-sm text-gray-400 mb-4") No API keys added yet.
+          button(class="btn btn-teal" data-modal-open="modal-add-key") + Add your first key
+      else
+        table(class="data-table")
+          thead
+            tr
+              th Provider
+              th Name
+              th Key
+              th Added
+              th
+          tbody
+            each k in apiKeys
+              tr(data-key-row=k._id)
+                td
+                  -
+                    var icons = { anthropic:'🟣', openai:'⚪', stripe:'🔵', notion:'⬛', slack:'💬', github:'⚙️', beehiiv:'🐝', other:'🔑' }
+                  div(class="flex items-center gap-2")
+                    span= icons[k.provider] || '🔑'
+                    span(class="text-xs font-medium text-gray-500 capitalize")= k.provider
+                td(class="font-medium text-gray-800")= k.name
+                td: span(class="font-mono text-xs bg-gray-50 border border-gray-100 px-2 py-0.5 rounded")= k.masked
+                td(class="text-xs text-gray-400")= new Date(k.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                td(class="text-right")
+                  button(class="btn btn-danger text-xs" data-delete-key=k._id.toString()) Remove
+
+  //- ══════════════════════════════
+  //- TOOLS
+  //- ══════════════════════════════
+  div(id="spane-tools" data-spane class="hidden")
+    p(class="text-sm text-gray-500 mb-5") Enable integrations your agents can call during tasks.
+
+    each cat in Object.keys(grouped)
+      div(class="mb-6")
+        div(class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3")= cat
+        div(class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))")
+          each tool in grouped[cat]
+            div(
+              class=`card p-4 flex flex-col gap-3 transition-colors${tool.enabled ? ' border-teal-200' : ''}`
+              data-tool-card
+            )
+              div(class="flex items-start gap-3")
+                div(class="w-9 h-9 rounded-lg bg-main-bg border border-gray-200 flex items-center justify-center text-lg flex-shrink-0")= tool.icon
+                div(class="flex-1 min-w-0")
+                  div(class="flex items-center gap-2 mb-0.5")
+                    span(class="text-sm font-semibold text-gray-900")= tool.name
+                    span(class=`pill ${tool.enabled ? 'pill-running' : 'pill-idle'} text-xs` data-tool-pill)= tool.enabled ? 'Enabled' : 'Disabled'
+                  p(class="text-xs text-gray-500 leading-relaxed")= tool.description
+                button(
+                  class=`skill-toggle flex-shrink-0${tool.enabled ? '' : ' off'}`
+                  data-tool-toggle=tool._id.toString()
+                  title="Toggle"
+                )
+              if tool.slug === 'slack' || tool.slug === 'webhook' || tool.slug === 'zapier'
+                form(class="flex gap-2 mt-1" data-webhook-form=tool._id.toString())
+                  input(
+                    class="field text-xs font-mono flex-1"
+                    type="url"
+                    placeholder="https://hooks.slack.com/…"
+                    value=tool.webhookUrl
+                  )
+                  button(class="btn btn-ghost text-xs flex-shrink-0" type="submit") Save
+
+  //- ══════════════════════════════
+  //- DEVELOPER
+  //- ══════════════════════════════
+  div(id="spane-developer" data-spane class="hidden")
+    div(class="grid grid-cols-2 gap-5 max-w-4xl")
+
+      div(class="card col-span-2")
+        div(class="card-header")
+          span(class="card-title") Ingest tokens
+          button(class="btn btn-teal text-xs" data-modal-open="modal-add-token") + New token
+        if ingestTokens.length === 0
+          div(class="p-8 text-center")
+            p(class="text-2xl mb-2") 🔑
+            p(class="text-sm text-gray-400 mb-3") No tokens yet. Generate one to start sending data from your agents.
+            button(class="btn btn-teal" data-modal-open="modal-add-token") + Generate token
+        else
+          table(class="data-table")
+            thead
+              tr
+                th Name
+                th Last used
+                th Created
+                th
+            tbody
+              each t in ingestTokens
+                tr(data-token-row=t._id)
+                  td(class="font-medium text-gray-800")= t.name
+                  td(class="text-xs text-gray-400")= t.lastUsed ? new Date(t.lastUsed).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Never'
+                  td(class="text-xs text-gray-400")= new Date(t.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+                  td(class="text-right")
+                    button(class="btn btn-danger text-xs" data-delete-token=t._id.toString()) Revoke
+
+      div(class="card col-span-2")
+        div(class="card-header"): span(class="card-title") Integration — Node.js snippet
+        div(class="card-body")
+          p(class="text-xs text-gray-500 mb-3") Drop this into your OpenClaw agent. Replace the token and base URL.
+          pre(class="bg-gray-900 text-green-400 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed" style="font-size:11px").
+            // paperclip.js — add to your OpenClaw agent
+            const PAPERCLIP_URL   = 'http://localhost:3000';
+            const PAPERCLIP_TOKEN = 'YOUR_INGEST_TOKEN_HERE';
+
+            async function log(endpoint, body) {
+              await fetch(`${PAPERCLIP_URL}/api/ingest/${endpoint}`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+                body:    JSON.stringify(body),
+              }).catch(() => {}); // fire and forget
+            }
+
+            // Log a completed action
+            await log('activity', {
+              agentName: 'OpenClaw',
+              action:    'Scraped 48 newsletters — 1,240 sponsors indexed',
+              tokens:    150000,
+              cost:      0.07,
+            });
+
+            // Log token usage
+            await log('usage', {
+              agentName: 'OpenClaw',
+              model:     'claude-sonnet-4-6',
+              tokens:    150000,
+              cost:      0.07,
+              tasks:     1,
+            });
+
+            // Create a task (returns taskId)
+            const { taskId } = await fetch(`${PAPERCLIP_URL}/api/ingest/task`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+              body:    JSON.stringify({ agentName: 'OpenClaw', title: 'Scraping 48 newsletters', status: 'running' }),
+            }).then(r => r.json());
+
+            // Later — mark it done
+            await fetch(`${PAPERCLIP_URL}/api/ingest/task/${taskId}`, {
+              method:  'PATCH',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+              body:    JSON.stringify({ status: 'done', progress: 100, tokens: 150000, cost: 0.07, result: '1,240 sponsors indexed' }),
+            });
+
+      div(class="card col-span-2")
+        div(class="card-header"): span(class="card-title") API reference
+        div(class="card-body flex flex-col gap-3")
+          -
+            var endpoints = [
+              { method:'POST',  path:'/api/ingest/activity',  fields:'agentName*, action*, tokens, cost',                     desc:'Log a completed action. Shows in Activity feed and dashboard.' },
+              { method:'POST',  path:'/api/ingest/usage',     fields:'agentName*, model, tokens*, cost*, tasks',              desc:'Log token/cost usage. Shows in Usage charts and By Agent breakdown.' },
+              { method:'POST',  path:'/api/ingest/task',      fields:'agentName*, title*, status, progress, tokens, cost, result', desc:'Create a task. Returns taskId for later updates.' },
+              { method:'PATCH', path:'/api/ingest/task/:id',  fields:'status, progress, tokens, cost, result',               desc:'Update a running task (progress, completion, cost).' },
+            ]
+          each ep in endpoints
+            div(class="flex items-start gap-3 p-3 bg-main-bg rounded-lg border border-gray-100")
+              span(class=`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold flex-shrink-0 ${ep.method === 'POST' ? 'bg-teal-100 text-teal-700' : 'bg-amber-100 text-amber-700'}`)= ep.method
+              div(class="flex-1 min-w-0")
+                span(class="font-mono text-xs text-gray-800 block mb-0.5")= ep.path
+                span(class="text-xs text-gray-500 block mb-0.5")= ep.desc
+                span(class="font-mono text-xs text-gray-400") #{ep.fields}
+
+block overlays
+
+  div(class="modal-backdrop" id="modal-add-token")
+    div(class="modal p-6")
+      div(class="flex items-center justify-between mb-5")
+        h2(class="text-base font-bold text-gray-900") New ingest token
+        button(class="text-gray-400 hover:text-gray-600 text-lg" data-modal-close="modal-add-token") ×
+
+      //- Step 1 — name form
+      div(id="token-step-name")
+        p(class="text-sm text-gray-500 mb-4") Give this token a name so you know which agent uses it.
+        form(class="flex flex-col gap-4" id="token-create-form")
+          div
+            label(class="label") Token name
+            input(class="field" type="text" name="name" placeholder="e.g. OpenClaw local" required)
+          div(class="flex gap-3 pt-1")
+            button(class="btn btn-teal flex-1" type="submit") Generate
+            button(class="btn btn-ghost" type="button" data-modal-close="modal-add-token") Cancel
+
+      //- Step 2 — show the token (hidden until generated)
+      div(id="token-step-reveal" class="hidden")
+        p(class="text-sm text-gray-500 mb-3") Copy this token now — it won't be shown again.
+        div(class="flex items-center gap-2 mb-4")
+          input(id="token-value-display" class="field font-mono text-xs flex-1" type="text" readonly)
+          button(class="btn btn-ghost text-xs flex-shrink-0" id="token-copy-btn") Copy
+        p(class="text-xs text-gray-400 mb-4") Add it to your agent as the #[code.bg-gray-100.px-1.rounded PAPERCLIP_TOKEN] constant.
+        button(class="btn btn-teal w-full" data-modal-close="modal-add-token" id="token-done-btn") Done
+
+  div(class="modal-backdrop" id="modal-add-key")
+    div(class="modal p-6")
+      div(class="flex items-center justify-between mb-5")
+        h2(class="text-base font-bold text-gray-900") Add API key
+        button(class="text-gray-400 hover:text-gray-600 text-lg" data-modal-close="modal-add-key") ×
+      form(class="flex flex-col gap-4" id="key-create-form")
+        div
+          label(class="label") Provider
+          select(class="field" name="provider" id="key-provider")
+            option(value="anthropic") Anthropic (Claude)
+            option(value="openai") OpenAI
+            option(value="stripe") Stripe
+            option(value="notion") Notion
+            option(value="slack") Slack
+            option(value="github") GitHub
+            option(value="beehiiv") Beehiiv
+            option(value="other") Other
+        div
+          label(class="label") Label
+          input(class="field" type="text" name="name" id="key-name" placeholder="e.g. Anthropic Production" required)
+        div
+          label(class="label") API key
+          input(class="field font-mono text-xs" type="password" name="key" placeholder="sk-••••••••••••" required)
+          p(class="text-xs text-gray-400 mt-1") Stored in your database. Never shown in full after saving.
+        div(class="flex gap-3 pt-1")
+          button(class="btn btn-teal flex-1" type="submit") Save key
+          button(class="btn btn-ghost" type="button" data-modal-close="modal-add-key") Cancel
+
+block scripts
+
+  style.
+    .stab       { padding:10px 16px;font-size:13px;font-weight:500;color:#6b7288;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s,border-color .15s; }
+    .stab:hover { color:#374151; }
+    .stab.active{ color:#14b8a6;border-bottom-color:#14b8a6; }
+    [data-spane].hidden { display:none; }
+
+  script.
+    // ── Tab switching ──
+    (function() {
+      var tabs  = document.querySelectorAll('[data-stab]');
+      var panes = document.querySelectorAll('[data-spane]');
+      function activate(tab) {
+        tabs.forEach(function(t) { t.classList.toggle('active', t.dataset.stab === tab); });
+        panes.forEach(function(p) { p.classList.toggle('hidden', p.id !== 'spane-' + tab); });
+        history.replaceState(null, '', '#' + tab);
+      }
+      tabs.forEach(function(btn) { btn.addEventListener('click', function() { activate(this.dataset.stab); }); });
+      var hash = location.hash.replace('#','');
+      activate(['general','api-keys','tools','developer'].includes(hash) ? hash : 'general');
+    })();
+
+    // ── Add API key — auto-fill label ──
+    (function() {
+      var provSelect = document.getElementById('key-provider');
+      var nameInput  = document.getElementById('key-name');
+      var defaults   = { anthropic:'Anthropic (Claude)', openai:'OpenAI', stripe:'Stripe', notion:'Notion', slack:'Slack', github:'GitHub', beehiiv:'Beehiiv', other:'' };
+      if (provSelect) {
+        provSelect.addEventListener('change', function() {
+          var cur = nameInput.value;
+          var wasDefault = !cur || Object.values(defaults).includes(cur);
+          if (wasDefault) nameInput.value = defaults[this.value] || '';
+        });
+      }
+    })();
+
+    // ── Add API key — submit ──
+    (function() {
+      var form = document.getElementById('key-create-form');
+      if (!form) return;
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var data = Object.fromEntries(new FormData(this));
+        var res  = await fetch('/settings/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(data),
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          document.getElementById('modal-add-key').classList.remove('open');
+          form.reset();
+          setTimeout(function() { location.reload(); }, 300);
+        }
+      });
+    })();
+
+    // ── Delete API key ──
+    document.querySelectorAll('[data-delete-key]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Remove this API key?')) return;
+        var res = await fetch('/settings/keys/' + this.dataset.deleteKey, {
+          method: 'DELETE', headers: { Accept: 'application/json' },
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          var row = this.closest('[data-key-row]');
+          if (row) row.remove();
+        }
+      });
+    });
+
+    // ── Tool toggles ──
+    document.querySelectorAll('[data-tool-toggle]').forEach(function(toggle) {
+      toggle.addEventListener('click', async function() {
+        var res = await fetch('/settings/tools/' + this.dataset.toolToggle + '/toggle', {
+          method: 'PATCH', headers: { Accept: 'application/json' },
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          this.classList.toggle('off', !res.enabled);
+          var card = this.closest('[data-tool-card]');
+          if (card) {
+            card.classList.toggle('border-teal-200', res.enabled);
+            var pill = card.querySelector('[data-tool-pill]');
+            if (pill) {
+              pill.textContent = res.enabled ? 'Enabled' : 'Disabled';
+              pill.className   = (res.enabled ? 'pill pill-running' : 'pill pill-idle') + ' text-xs';
+            }
+          }
+        }
+      });
+    });
+
+    // ── Generate ingest token ──
+    (function() {
+      var form = document.getElementById('token-create-form');
+      if (!form) return;
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var name = new FormData(this).get('name');
+        var res  = await fetch('/settings/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ name }),
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          document.getElementById('token-step-name').classList.add('hidden');
+          var reveal = document.getElementById('token-step-reveal');
+          reveal.classList.remove('hidden');
+          var display = document.getElementById('token-value-display');
+          display.value = res.token;
+          // When modal closes, reload to show new token in table
+          var doneBtn = document.getElementById('token-done-btn');
+          if (doneBtn) doneBtn.addEventListener('click', function() { setTimeout(function() { location.reload(); }, 300); }, { once: true });
+        }
+      });
+
+      // Copy button
+      var copyBtn = document.getElementById('token-copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          var val = document.getElementById('token-value-display').value;
+          navigator.clipboard.writeText(val).then(function() {
+            copyBtn.textContent = 'Copied ✓';
+            setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+          });
+        });
+      }
+
+      // Reset modal steps when it closes
+      document.querySelectorAll('[data-modal-close="modal-add-token"]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          setTimeout(function() {
+            document.getElementById('token-step-name').classList.remove('hidden');
+            document.getElementById('token-step-reveal').classList.add('hidden');
+            form.reset();
+          }, 300);
+        });
+      });
+    })();
+
+    // ── Revoke ingest token ──
+    document.querySelectorAll('[data-delete-token]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Revoke this token? Any agent using it will stop working.')) return;
+        var res = await fetch('/settings/tokens/' + this.dataset.deleteToken, {
+          method: 'DELETE', headers: { Accept: 'application/json' },
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          var row = this.closest('[data-token-row]');
+          if (row) row.remove();
+        }
+      });
+    });
+
+    // ── Webhook URL save ──
+    document.querySelectorAll('[data-webhook-form]').forEach(function(form) {
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var res = await fetch('/settings/tools/' + this.dataset.webhookForm, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ webhookUrl: this.querySelector('input').value }),
+        }).then(function(r) { return r.json(); });
+        if (res.ok) {
+          var btn = this.querySelector('button[type="submit"]');
+          if (btn) { btn.textContent = 'Saved ✓'; setTimeout(function() { btn.textContent = 'Save'; }, 2000); }
+        }
+      });
+    });

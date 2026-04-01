@@ -1,0 +1,59 @@
+-
+  const nav = [
+    { href: '/',         icon: '⊞', label: 'Dashboard' },
+    { href: '/agents',   icon: '🤖', label: 'Agents' },
+    { href: '/connect',  icon: '＋', label: 'Connect agent' },
+    { href: '/activity', icon: '⚡', label: 'Activity' },
+    { href: '/tasks',    icon: '☑',  label: 'Tasks' },
+    { href: '/crons',    icon: '⏱',  label: 'Crons' },
+    { href: '/skills',   icon: '🧩', label: 'Skills' },
+  ]
+  const navKnowledge = [
+    { href: '/resources', icon: '🧠', label: 'Resources' },
+  ]
+  const navAnalytics = [
+    { href: '/usage',    icon: '📊', label: 'Usage' },
+    { href: '/reports',  icon: '📋', label: 'Reports' },
+    { href: '/revenue',  icon: '💵', label: 'Revenue' },
+  ]
+
+aside(class="sidebar flex flex-col w-52 flex-shrink-0 border-r" style="border-color:rgba(255,255,255,0.06)")
+
+  div(class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,0.06)")
+    div(class="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" style="background:linear-gradient(135deg,#14b8a6,#0891b2)") P
+    span(class="text-sm font-bold text-white tracking-tight")
+      | TR INC 
+      span(style="color:#14b8a6") HQ
+
+  nav(class="flex-1 px-2 py-2 flex flex-col overflow-y-auto" style="gap:2px")
+
+    each item in nav
+      - const active = currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href))
+      a(href=item.href class=`sb-item${active ? ' active' : ''}`)
+        span(class="text-sm")= item.icon
+        span= item.label
+
+    hr(class="sb-divider")
+    div(class="sb-label") Knowledge
+    each item in navKnowledge
+      - const active = currentPath.startsWith(item.href)
+      a(href=item.href class=`sb-item${active ? ' active' : ''}`)
+        span(class="text-sm")= item.icon
+        span= item.label
+
+    hr(class="sb-divider")
+    div(class="sb-label") Analytics
+    each item in navAnalytics
+      - const active = currentPath.startsWith(item.href)
+      a(href=item.href class=`sb-item${active ? ' active' : ''}`)
+        span(class="text-sm")= item.icon
+        span= item.label
+
+  div(class="px-2 pb-2" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px")
+    div(class="sb-item" style="cursor:default")
+      div(class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)") T
+      span(style="color:#c8cadf") Tobi
+    - const settingsActive = currentPath.startsWith('/settings')
+    a(href="/settings" class=`sb-item${settingsActive ? ' active' : ''}`)
+      span ⚙
+      span Settings

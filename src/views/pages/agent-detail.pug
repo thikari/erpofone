@@ -1,0 +1,291 @@
+extends ../layout
+include ../partials/agent-avatar
+
+block content
+
+  a(class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4 no-underline" href="/agents") ← Back to agents
+
+  div(class=`card p-5 mb-5 flex items-center gap-4 accent-${agent.color}`)
+    div(class=`w-12 h-12 rounded-xl flex items-center justify-center text-base font-bold flex-shrink-0 av-${agent.color}`)= agent.initials
+    div(class="flex-1")
+      div(class="text-xl font-bold text-gray-900" style="margin-bottom:4px")= agent.name
+      div(class="flex items-center gap-2 text-sm text-gray-500")
+        span= agent.role
+        span(class=`pill pill-${agent.status}`)
+          span(class=`sdot${agent.status === 'running' ? ' sdot-blink' : ''}`)
+          = ' ' + agent.status
+    div(class="flex gap-8")
+      div(class="text-center")
+        span(class="block font-mono text-xl font-bold text-gray-900")= agent.tasksTotal
+        span(class="text-xs text-gray-400") Tasks done
+      div(class="text-center")
+        span(class="block font-mono text-xl font-bold text-gray-900") #{agent.successRate}%
+        span(class="text-xs text-gray-400") Success rate
+      div(class="text-center")
+        span(class="block font-mono text-xl font-bold text-gray-900") €#{agent.costToday.toFixed(2)}
+        span(class="text-xs text-gray-400") Cost today
+
+  div(class="flex gap-0 border-b border-gray-200 mb-5")
+    each tab in ['overview','control','skills','settings']
+      button(class=`dtab${tab === 'overview' ? ' active' : ''}` data-tab=tab data-tab-group="agent")= tab.charAt(0).toUpperCase() + tab.slice(1)
+
+  div(id="pane-overview" data-pane data-tab-group="agent")
+    div(class="grid grid-cols-2 gap-5")
+      div(class="card")
+        div(class="card-header"): span(class="card-title") About
+        div(class="card-body")
+          p(class="text-sm text-gray-600 leading-relaxed")= agent.description || 'No description set.'
+          if agent.currentTask
+            div(class="mt-3 p-3 bg-main-bg rounded-lg border border-gray-100")
+              span(class="text-gray-400 uppercase tracking-wider block mb-1" style="font-size:10px") Current task
+              p(class="text-xs font-mono text-gray-700")= agent.currentTask
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Quick stats
+        div(class="card-body grid grid-cols-2 gap-3")
+          each item in [{label:'Total tasks',val:agent.tasksTotal},{label:'Success rate',val:agent.successRate+'%'},{label:'Cost today',val:'€'+agent.costToday.toFixed(2)},{label:'Status',val:agent.status}]
+            div(class="p-3 bg-main-bg rounded-lg")
+              span(class="text-gray-400 uppercase tracking-wider block mb-1" style="font-size:10px")= item.label
+              span(class="font-mono text-sm font-semibold text-gray-800")= item.val
+          if agent.model
+            div(class="p-3 bg-main-bg rounded-lg col-span-2")
+              span(class="text-gray-400 uppercase tracking-wider block mb-1" style="font-size:10px") Primary model
+              span(class="font-mono text-sm font-semibold text-gray-800")= agent.model
+
+    div(class="grid grid-cols-3 gap-4 mt-5")
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-teal-50"): span 💰
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= usageTotals.cost
+          span(class="text-xs text-gray-500") Cost (7 days)
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-blue-50"): span ⚡
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= usageTotals.tokens
+          span(class="text-xs text-gray-500") Tokens (7 days)
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-amber-50"): span 💬
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= usageTotals.tasks
+          span(class="text-xs text-gray-500") Tasks (7 days)
+
+    div(class="grid grid-cols-2 gap-5 mt-5")
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Cost over time (7 days)
+        div(class="p-4" style="height:180px;position:relative")
+          canvas(id="agent-chart")
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Models used
+        table(class="data-table")
+          thead
+            tr
+              th Model
+              th(class="r") Cost
+              th(style="min-width:90px") %
+              th(class="r") Tokens
+          tbody
+            if usageByModel.length === 0
+              tr: td(colspan="4" class="text-center text-gray-400 py-6 text-sm") No usage logged yet.
+            else
+              -
+                var modelColors = {'claude-opus-4-6':'#14b8a6','claude-sonnet-4-6':'#3b82f6','claude-haiku-4-5':'#10b981'}
+              each m in usageByModel
+                tr
+                  td: span(class="font-mono text-xs")= m.model
+                  td(class="r")= m.costFmt
+                  td
+                    div(class="flex items-center gap-2")
+                      div(style=`height:4px;flex:1;background:#f0f1f8;border-radius:2px;overflow:hidden`)
+                        div(style=`height:100%;border-radius:2px;background:${modelColors[m.model]||'#9ca3af'};width:${m.pct}%`)
+                      span(class="font-mono text-xs text-gray-400 text-right" style="min-width:32px") #{m.pct}%
+                  td(class="r")= m.tokensFmt
+
+  div(id="pane-skills" class="hidden" data-pane data-tab-group="agent")
+    div(class="flex items-center justify-between mb-4")
+      span(class="text-xs font-semibold text-gray-400 uppercase tracking-wider") Active skills (#{agent.skills.length})
+      button(class="btn btn-teal" data-panel-open="panel-skill-lib") + Add skill
+    if agent.skills.length === 0
+      div(class="card p-8 text-center")
+        p(class="text-sm text-gray-400 mb-3") No skills assigned yet.
+        button(class="btn btn-teal" data-panel-open="panel-skill-lib") + Add first skill
+    else
+      div(class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))")
+        each skill in agent.skills
+          div(class="card flex items-start gap-3" style="padding:14px")
+            div(class="w-8 h-8 rounded-lg bg-main-bg border border-gray-200 flex items-center justify-center text-base flex-shrink-0")= skill.icon
+            div(class="flex-1 min-w-0")
+              div(class="text-sm font-semibold text-gray-800" style="margin-bottom:2px")= skill.name
+              div(class="text-xs text-gray-500")= skill.description
+            button(class="skill-toggle" data-skill-id=skill._id.toString() data-agent-id=agent._id.toString() title="Toggle skill")
+
+  div(id="pane-control" class="hidden" data-pane data-tab-group="agent")
+    div(class="grid grid-cols-2 gap-5")
+
+      //- ── Assign task ──
+      div(class="card")
+        div(class="card-header"): span(class="card-title") Assign task
+        div(class="card-body flex flex-col gap-3")
+          div
+            label(class="label") Task title
+            input#ctrl-task-title(class="field" type="text" placeholder="e.g. Write weekly report" autocomplete="off")
+          div
+            label(class="label") Description (optional)
+            textarea#ctrl-task-desc(class="field" rows="2" placeholder="Any extra context for the agent…")
+          button#btn-assign-task(class="btn btn-teal" data-agent-id=agent._id.toString() data-agent-name=agent.name) Assign task
+          div#assign-result(class="text-xs text-gray-400 hidden")
+
+      //- ── Status controls ──
+      div(class="flex flex-col gap-5")
+        div(class="card")
+          div(class="card-header"): span(class="card-title") Status
+          div(class="card-body flex flex-wrap gap-2")
+            each s in ['running','idle','queued','offline']
+              button(class=`btn-status-set btn ${agent.status === s ? 'btn-teal' : 'btn-gray'}` data-status=s data-agent-id=agent._id.toString())= s.charAt(0).toUpperCase()+s.slice(1)
+
+        div(class="card")
+          div(class="card-header"): span(class="card-title") Wake agent
+          div(class="card-body flex flex-col gap-3")
+            p(class="text-xs text-gray-500") For Paperclip-managed agents: triggers a heartbeat run. Requires Paperclip to be running at localhost:3100.
+            div(class="flex gap-2")
+              input#ctrl-company-id(class="field" type="text" placeholder="Company ID (from Paperclip)")
+              input#ctrl-paperclip-agent-id(class="field" type="text" placeholder="Agent ID (from Paperclip)")
+            button#btn-wake(class="btn btn-gray" data-agent-name=agent.name) ▶ Wake / run heartbeat
+            div#wake-result(class="text-xs text-gray-400 hidden")
+
+  div(id="pane-settings" class="hidden" data-pane data-tab-group="agent")
+    div(class="card")
+      div(class="card-header"): span(class="card-title") Agent settings
+      div(class="card-body")
+        form(class="flex flex-col gap-4")
+          div
+            label(class="label") Name
+            input(class="field" type="text" name="name" value=agent.name)
+          div
+            label(class="label") Role
+            input(class="field" type="text" name="role" value=agent.role)
+          div
+            label(class="label") Description
+            textarea(class="field" name="description" rows="3")= agent.description
+          div
+            label(class="label") Model
+            select(class="field" name="model")
+              each m in ['claude-opus-4-6','claude-sonnet-4-6','claude-haiku-4-5']
+                option(value=m selected=agent.model===m)= m
+          div
+            label(class="label") Status
+            select(class="field" name="status")
+              each s in ['running','idle','queued','offline']
+                option(value=s selected=agent.status===s)= s.charAt(0).toUpperCase()+s.slice(1)
+          div
+            label(class="label") Color
+            select(class="field" name="color")
+              each c in ['teal','amber','purple','green','gray']
+                option(value=c selected=agent.color===c)= c.charAt(0).toUpperCase()+c.slice(1)
+          button(class="btn btn-teal" type="submit") Save changes
+
+block overlays
+  div(class="panel-overlay" id="panel-skill-lib")
+    div(class="slide-panel")
+      div(class="flex items-center justify-between px-4 border-b border-gray-100" style="padding-top:14px;padding-bottom:14px")
+        span(class="text-sm font-bold text-gray-900") Add skill
+        button(class="w-7 h-7 border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600" data-panel-close="panel-skill-lib") ×
+      div(class="px-4 border-b border-gray-100" style="padding-top:10px;padding-bottom:10px")
+        input(class="field" id="lib-search" type="text" placeholder="Search skills…")
+      div(class="flex-1 overflow-y-auto p-4 flex flex-col gap-1")
+        each cat in Object.keys(grouped)
+          div(class="lib-category")
+            div(class="text-gray-400 font-semibold uppercase tracking-wider pt-2 pb-1" style="font-size:10px")= cat
+            each skill in grouped[cat]
+              div(class=`lib-row flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors${agentSkillIds.includes(skill._id.toString()) ? ' added border-brand-teal bg-teal-50' : ' border-gray-100 hover:border-brand-teal hover:bg-teal-50'}` data-add-skill=skill._id.toString() data-agent-id=agent._id.toString())
+                span(class="text-lg w-6 text-center")= skill.icon
+                div(class="flex-1")
+                  div(class="text-sm font-medium text-gray-800")= skill.name
+                  div(class="text-xs text-gray-500")= skill.description
+                if agentSkillIds.includes(skill._id.toString())
+                  span(class="check-mark font-bold" style="color:#14b8a6") ✓
+
+block scripts
+  style.
+    .dtab { padding:10px 16px;font-size:13px;font-weight:500;color:#6b7288;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s,border-color .15s; }
+    .dtab:hover { color:#374151; }
+    .dtab.active { color:#14b8a6;border-bottom-color:#14b8a6; }
+    [data-pane].hidden { display:none; }
+  script.
+    (function() {
+      var ctx = document.getElementById('agent-chart');
+      if (!ctx) return;
+      new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: !{JSON.stringify(chartLabels)},
+          datasets: [{ data: !{JSON.stringify(chartData)}, backgroundColor:'rgba(59,130,246,0.42)', hoverBackgroundColor:'rgba(59,130,246,0.65)', borderRadius:5, borderSkipped:false }],
+        },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#1e2030',titleColor:'#9ca3af',bodyColor:'#e2e4ef',padding:10,callbacks:{label:function(c){return ' €'+c.parsed.y.toFixed(2);}}} },
+          scales:{
+            x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:11}}},
+            y:{grid:{color:'#f0f1f8'},border:{display:false},ticks:{color:'#9ca3af',font:{size:11},callback:function(v){return '€'+v;}}},
+          },
+        },
+      });
+    })();
+
+  script.
+    // ── Status buttons ──
+    document.querySelectorAll('.btn-status-set').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        const agentId = this.dataset.agentId;
+        const status  = this.dataset.status;
+        await fetch('/agents/' + agentId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        document.querySelectorAll('.btn-status-set').forEach(function(b) {
+          b.classList.toggle('btn-teal', b.dataset.status === status);
+          b.classList.toggle('btn-gray',  b.dataset.status !== status);
+        });
+      });
+    });
+
+    // ── Assign task ──
+    document.getElementById('btn-assign-task').addEventListener('click', async function() {
+      const title    = document.getElementById('ctrl-task-title').value.trim();
+      const desc     = document.getElementById('ctrl-task-desc').value.trim();
+      const agentName = this.dataset.agentName;
+      const result   = document.getElementById('assign-result');
+      if (!title) { result.textContent = 'Enter a task title.'; result.classList.remove('hidden'); return; }
+      this.textContent = 'Assigning…'; this.disabled = true;
+      const r = await fetch('/api/control/task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: this.dataset.agentId, agentName, title, description: desc }),
+      });
+      const d = await r.json();
+      result.classList.remove('hidden');
+      if (d.ok) {
+        result.textContent = '✓ Task assigned' + (d.paperclip ? ' + Paperclip issue created' : '');
+        document.getElementById('ctrl-task-title').value = '';
+        document.getElementById('ctrl-task-desc').value  = '';
+      } else {
+        result.textContent = '✗ ' + (d.error || 'Failed');
+      }
+      this.textContent = 'Assign task'; this.disabled = false;
+    });
+
+    // ── Wake agent ──
+    document.getElementById('btn-wake').addEventListener('click', async function() {
+      const companyId = document.getElementById('ctrl-company-id').value.trim();
+      const papAgentId = document.getElementById('ctrl-paperclip-agent-id').value.trim();
+      const result    = document.getElementById('wake-result');
+      this.textContent = 'Waking…'; this.disabled = true;
+      const r = await fetch('/api/control/wake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentName: this.dataset.agentName, companyId, papAgentId }),
+      });
+      const d = await r.json();
+      result.classList.remove('hidden');
+      result.textContent = d.ok ? ('✓ ' + d.message) : ('✗ ' + (d.error || 'Failed'));
+      this.textContent = '▶ Wake / run heartbeat'; this.disabled = false;
+    });

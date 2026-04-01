@@ -1,0 +1,30 @@
+{
+  "name": "paperclip-hq",
+  "version": "1.0.0",
+  "description": "PaperclipHQ — Solopreneur AI Agent Command Center",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build:css": "tailwindcss -i ./src/public/css/input.css -o ./src/public/css/output.css --minify",
+    "watch:css": "tailwindcss -i ./src/public/css/input.css -o ./src/public/css/output.css --watch",
+    "seed": "node scripts/seed.js",
+    "sync": "node scripts/sync-agents.js",
+    "add-agent": "node scripts/add-agent.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
+    "mongoose": "^8.3.4",
+    "pug": "^3.0.3",
+    "stripe": "^21.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "autoprefixer": "^10.4.19",
+    "nodemon": "^3.1.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3"
+  }
+}

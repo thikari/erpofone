@@ -1,0 +1,66 @@
+extends ../layout
+
+block scripts
+  script.
+    (function () {
+      const es = new EventSource('/api/live');
+      es.addEventListener('activity:new', e => {
+        const ev = JSON.parse(e.data);
+        const list = document.getElementById('activity-feed');
+        if (!list) return;
+        const colors = { teal:'av-teal', amber:'av-amber', purple:'av-purple', green:'av-green', gray:'av-gray' };
+        const time = new Date(ev.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const row = document.createElement('div');
+        row.className = 'flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 live-row';
+        row.innerHTML = `
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${colors[ev.color] || 'av-teal'}" style="font-size:10px">${ev.initials}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-800 leading-relaxed"><strong class="font-semibold">${ev.agentName} </strong>${ev.action}</p>
+            <div class="flex items-center gap-3 mt-1 font-mono text-xs text-gray-400"><span>${time}</span></div>
+          </div>`;
+        list.prepend(row);
+        // Update counter
+        const counter = document.getElementById('event-count');
+        if (counter) counter.textContent = (parseInt(counter.textContent) + 1) + ' events';
+      });
+      es.onerror = () => {};
+    })();
+
+block content
+
+  div(class="flex items-center justify-between mb-6")
+    div
+      h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Activity
+      p(class="text-sm text-gray-500") All agent actions and events
+    a(href="/activity" class=`btn ${!activeAgent ? 'btn-teal' : 'btn-gray'}`) All agents
+
+  //- Agent filter tabs
+  if agentNames.length > 1
+    div(class="flex flex-wrap gap-2 mb-4")
+      each name in agentNames
+        a(href=`/activity?agent=${encodeURIComponent(name)}`
+          class=`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeAgent === name ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`)
+          = name
+
+  div(class="card")
+    div(class="card-header")
+      span(class="card-title")= activeAgent ? activeAgent : 'All agents'
+      span(class="text-xs font-mono text-gray-400" id="event-count") #{events.length} events
+
+    if events.length === 0
+      div(class="p-12 text-center text-sm text-gray-400") No activity yet. Run a sync or agents will log actions via the ingest API.
+    else
+      div(class="divide-y divide-gray-50" id="activity-feed")
+        each ev in events
+          div(class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors")
+            div(class=`w-8 h-8 rounded-lg flex items-center justify-center font-bold flex-shrink-0 av-${ev.color}` style="font-size:10px")= ev.initials
+            div(class="flex-1 min-w-0")
+              p(class="text-sm text-gray-800 leading-relaxed")
+                strong(class="font-semibold")= ev.agentName + ' '
+                = ev.action
+              div(class="flex items-center gap-3 mt-1 font-mono text-xs text-gray-400")
+                span= new Date(ev.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                if ev.tokens
+                  span= (ev.tokens>=1000000 ? (ev.tokens/1000000).toFixed(1)+'M' : ev.tokens>=1000 ? Math.round(ev.tokens/1000)+'K' : ev.tokens) + ' tokens'
+                if ev.cost && ev.cost > 0
+                  span $#{ev.cost.toFixed(4)}

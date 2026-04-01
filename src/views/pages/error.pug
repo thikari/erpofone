@@ -1,0 +1,8 @@
+extends ../layout
+
+block content
+  div(class="flex flex-col items-center justify-center text-center py-24")
+    div(class="font-mono font-bold text-gray-200 mb-4" style="font-size:64px")= code || 500
+    h1(class="text-xl font-bold text-gray-700 mb-2")= message || 'Something went wrong'
+    p(class="text-sm text-gray-400 mb-6") The page you were looking for doesn't exist or an error occurred.
+    a(class="btn btn-teal" href="/") ← Back to dashboard

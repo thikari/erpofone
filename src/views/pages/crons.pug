@@ -1,0 +1,117 @@
+extends ../layout
+
+block content
+
+  div(class="flex items-center justify-between mb-6")
+    div
+      h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Crons
+      p(class="text-sm text-gray-500") #{crons.length} scheduled jobs
+    button(class="btn btn-teal" data-modal-open="modal-new-cron") + Add cron
+
+  div(class="flex flex-col gap-2")
+
+    if crons.length === 0
+      div(class="card p-12 text-center")
+        p(class="text-sm text-gray-400 mb-3") No cron jobs yet.
+        button(class="btn btn-teal" data-modal-open="modal-new-cron") + Add cron
+
+    each cron in crons
+      div(class="card px-4 py-3 flex items-center gap-3" data-cron-id=cron._id.toString())
+        span(class="flex-shrink-0" style=`width:8px;height:8px;border-radius:50%;display:inline-block;background:${cron.status === 'active' ? '#22c55e' : cron.status === 'paused' ? '#f59e0b' : '#ef4444'}`)
+        div(class="flex-1 min-w-0")
+          div(class="flex items-center gap-2 mb-0.5")
+            span(class="text-sm font-medium text-gray-800")= cron.name
+            span(class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 font-mono text-gray-500" style="font-size:10px")= cron.schedule
+            if cron.agentName
+              span(class="inline-flex items-center px-2 py-0.5 rounded-full bg-teal-50 border border-teal-100 text-teal-700" style="font-size:10px")= cron.agentName
+          div(class="font-mono text-xs text-gray-400 flex items-center gap-3")
+            if cron.description
+              span= cron.description
+            if cron.lastRun
+              span Last run #{new Date(cron.lastRun).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+            else
+              span Never run
+            if cron.lastResult
+              span · #{cron.lastResult}
+            if cron.runCount > 0
+              span · #{cron.runCount} runs
+        div(class="flex items-center gap-2 ml-2")
+          span(class=`pill pill-${cron.status}`)
+            span(class="sdot")
+            = ' ' + cron.status
+          button(
+            class="btn btn-ghost text-xs"
+            data-toggle-id=cron._id.toString()
+            data-toggle-enabled=cron.enabled.toString()
+          )= cron.enabled ? 'Pause' : 'Enable'
+          button(
+            class="btn btn-danger text-xs"
+            data-delete-id=cron._id.toString()
+          ) ✕
+
+block overlays
+  div(class="modal-backdrop" id="modal-new-cron")
+    div(class="modal p-6")
+      div(class="flex items-center justify-between mb-5")
+        h2(class="text-base font-bold text-gray-900") New cron job
+        button(class="text-gray-400 hover:text-gray-600 text-lg" data-modal-close="modal-new-cron") ×
+      form(class="flex flex-col gap-4" id="cron-create-form" method="POST" action="/crons")
+        div
+          label(class="label") Name
+          input(class="field" type="text" name="name" placeholder="e.g. Daily newsletter digest" required)
+        div
+          label(class="label") Description
+          input(class="field" type="text" name="description" placeholder="Optional description")
+        div
+          label(class="label") Schedule
+          input(class="field" type="text" name="schedule" placeholder="e.g. daily at 9am or 0 9 * * *" required)
+        div
+          label(class="label") Assign to agent
+          select(class="field" name="agentId")
+            option(value="") — unassigned —
+            each agent in agents
+              option(value=agent._id.toString())= agent.name
+        div(class="flex gap-3 pt-1")
+          button(class="btn btn-teal flex-1" type="submit") Create cron
+          button(class="btn btn-ghost" type="button" data-modal-close="modal-new-cron") Cancel
+
+block scripts
+  script.
+    // Toggle enabled/disabled
+    document.querySelectorAll('[data-toggle-id]').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const id = this.dataset.toggleId;
+        const currentlyEnabled = this.dataset.toggleEnabled === 'true';
+        const newEnabled = !currentlyEnabled;
+        const newStatus  = newEnabled ? 'active' : 'paused';
+        try {
+          const r = await fetch(`/crons/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: newEnabled, status: newStatus }),
+          });
+          const d = await r.json();
+          if (d.ok) location.reload();
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    });
+
+    // Delete cron
+    document.querySelectorAll('[data-delete-id]').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Delete this cron job?')) return;
+        const id = this.dataset.deleteId;
+        try {
+          const r = await fetch(`/crons/${id}`, { method: 'DELETE' });
+          const d = await r.json();
+          if (d.ok) {
+            const card = document.querySelector(`[data-cron-id="${id}"]`);
+            if (card) card.remove();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    });

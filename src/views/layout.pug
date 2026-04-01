@@ -1,0 +1,33 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title= pageTitle + ' — PaperclipHQ'
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap")
+    link(rel="stylesheet" href="/css/output.css")
+    block head
+
+  body(class="flex h-screen overflow-hidden bg-main-bg font-sans")
+
+    //- ── Sidebar ──
+    include partials/sidebar
+
+    //- ── Main column ──
+    div(class="flex flex-col flex-1 overflow-hidden")
+
+      //- ── Topbar ──
+      include partials/topbar
+
+      //- ── Page content ──
+      main(class="flex-1 overflow-y-auto p-6")
+        block content
+
+    //- ── Modals / panels rendered per-page ──
+    block overlays
+
+    //- ── Scripts ──
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js")
+    script(src="/js/main.js")
+    block scripts

@@ -1,0 +1,26 @@
+header(class="flex items-center bg-white border-b border-gray-200 px-6 gap-4 flex-shrink-0" style="height:52px")
+
+  span(class="text-sm text-gray-500 font-medium whitespace-nowrap" id="tb-date")
+
+  div(class="relative flex-1" style="max-width:360px")
+    span(class="absolute text-gray-400 text-sm pointer-events-none" style="left:12px;top:50%;transform:translateY(-50%)") 🔍
+    input(class="w-full bg-main-bg border border-gray-200 rounded-lg text-sm outline-none text-gray-800" style="padding:7px 12px 7px 32px;transition:border-color .15s" type="text" placeholder="Search tasks, agents, activity…" onfocus="this.style.borderColor='#14b8a6'" onblur="this.style.borderColor=''")
+
+  div(class="ml-auto flex items-center gap-5")
+    div(class="text-right")
+      span(class="block font-mono text-sm font-semibold text-gray-800") €0.18
+      span(class="block text-gray-400 uppercase tracking-wider" style="font-size:10px") Today
+    div(class="text-right")
+      span(class="block font-mono text-sm font-semibold text-gray-800") €41.20
+      span(class="block text-gray-400 uppercase tracking-wider" style="font-size:10px") Mar
+
+script.
+  (function() {
+    var d = new Date();
+    var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
+    var ampm = h >= 12 ? 'PM' : 'AM', h12 = h % 12 || 12;
+    var el = document.getElementById('tb-date');
+    if (el) el.textContent = days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ' · ' + h12 + ':' + m + ' ' + ampm;
+  })();

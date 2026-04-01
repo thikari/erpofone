@@ -1,0 +1,78 @@
+extends ../layout
+
+block content
+
+  div(class="flex items-center justify-between mb-6")
+    div
+      h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Tasks
+      p(class="text-sm text-gray-500") #{counts.running} running · #{counts.queued} queued · #{counts.done} done today
+    button(class="btn btn-teal" data-modal-open="modal-new-task") + New task
+
+  div(class="flex gap-1 mb-5")
+    each f in [{val:'all',label:'All'},{val:'running',label:'Running'},{val:'queued',label:'Queued'},{val:'done',label:'Done'},{val:'failed',label:'Failed'}]
+      a(class=`px-3 py-2 text-xs font-semibold rounded-lg no-underline transition-colors${activeFilter===f.val ? ' bg-gray-900 text-white' : ' bg-white text-gray-500 border border-gray-200 hover:border-gray-300'}` href=`/tasks?status=${f.val}`)= f.label
+
+  div(class="flex flex-col gap-2")
+
+    if tasks.length === 0
+      div(class="card p-12 text-center")
+        p(class="text-sm text-gray-400 mb-3") No tasks yet.
+        button(class="btn btn-teal" data-modal-open="modal-new-task") + Create task
+
+    each task in tasks
+      div(class="card px-4 py-3 flex items-center gap-3")
+        span(class="text-base")
+          if task.status === 'running'
+            span(title="Running") 🟢
+          else if task.status === 'queued'
+            span(title="Queued") ⏳
+          else if task.status === 'done'
+            span(title="Done") ✅
+          else
+            span(title="Failed") ❌
+        div(class="flex-1 min-w-0")
+          div(class="text-sm font-medium text-gray-800" style="margin-bottom:2px")= task.title
+          div(class="flex items-center gap-3 font-mono text-xs text-gray-400")
+            if task.agentName
+              span= task.agentName.toLowerCase()
+            if task.status === 'running' && task.progress > 0
+              span #{task.progress}% complete
+            else if task.scheduledAt
+              span Scheduled #{new Date(task.scheduledAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
+            else if task.completedAt
+              span Completed #{new Date(task.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
+            if task.cost > 0
+              span €#{task.cost.toFixed(2)}
+        span(class=`pill pill-${task.status}`)
+          span(class=`sdot${task.status === 'running' ? ' sdot-blink' : ''}`)
+          = ' ' + task.status
+        if task.status !== 'done'
+          div(class="flex gap-1 ml-2")
+            if task.status === 'queued'
+              button(class="btn btn-ghost text-xs" data-task-id=task._id.toString() data-task-status="running") Start
+            if task.status === 'running'
+              button(class="btn btn-ghost text-xs" data-task-id=task._id.toString() data-task-status="done") Done
+            button(class="btn btn-danger text-xs" data-task-id=task._id.toString() data-task-status="failed") ✕
+
+block overlays
+  div(class="modal-backdrop" id="modal-new-task")
+    div(class="modal p-6")
+      div(class="flex items-center justify-between mb-5")
+        h2(class="text-base font-bold text-gray-900") New task
+        button(class="text-gray-400 hover:text-gray-600 text-lg" data-modal-close="modal-new-task") ×
+      form(class="flex flex-col gap-4" id="task-create-form")
+        div
+          label(class="label") Task description
+          input(class="field" type="text" name="title" placeholder="e.g. Scrape 50 newsletters for Sponsorgap" required)
+        div
+          label(class="label") Assign to agent
+          select(class="field" name="agentId")
+            option(value="") — unassigned —
+            each agent in agents
+              option(value=agent._id.toString())= agent.name
+        div
+          label(class="label") Schedule (optional)
+          input(class="field" type="datetime-local" name="scheduledAt")
+        div(class="flex gap-3 pt-1")
+          button(class="btn btn-teal flex-1" type="submit") Create task
+          button(class="btn btn-ghost" type="button" data-modal-close="modal-new-task") Cancel

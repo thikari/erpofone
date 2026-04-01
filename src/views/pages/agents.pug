@@ -1,0 +1,108 @@
+extends ../layout
+include ../partials/agent-avatar
+
+block content
+
+  div(class="flex items-center justify-between mb-6")
+    div
+      h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Agents
+      p(class="text-sm text-gray-500") #{agents.length} workers configured
+    div(class="flex gap-2")
+      button#btn-sync(class="btn btn-gray") ↻ Sync from Paperclip
+      button(class="btn btn-teal" data-modal-open="modal-new-agent") + New agent
+
+  if agents.length === 0
+    div(class="card p-12 text-center")
+      p(class="text-gray-400 text-sm mb-3") No agents yet.
+      button(class="btn btn-teal" data-modal-open="modal-new-agent") + Create your first agent
+  else
+    div(class="grid gap-4" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))")
+      each agent in agents
+        a(class=`card p-4 block no-underline hover:shadow-md transition-shadow cursor-pointer accent-${agent.color}` href=`/agents/${agent._id}`)
+          div(class="flex items-start gap-3 mb-3")
+            div(class=`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 av-${agent.color}`)= agent.initials
+            div(class="flex-1 min-w-0")
+              div(class="text-sm font-semibold text-gray-900" style="margin-bottom:2px")= agent.name
+              div(class="text-xs text-gray-500")= agent.role
+            span(class=`pill pill-${agent.status}`)
+              span(class=`sdot${agent.status === 'running' ? ' sdot-blink' : ''}`)
+              = ' ' + agent.status
+          p(class="text-xs text-gray-500 leading-relaxed mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden")= agent.description || 'No description.'
+          if agent.model
+            div(class="mb-3")
+              span(class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-200 bg-gray-50 font-mono text-gray-500" style="font-size:10px")
+                span(style="width:6px;height:6px;border-radius:50%;display:inline-block;background:#3b82f6;flex-shrink:0")
+                = ' ' + agent.model
+          div(class="grid grid-cols-3 border border-gray-100 rounded-lg overflow-hidden mb-3")
+            div(class="py-2 text-center border-r border-gray-100")
+              span(class="block font-mono text-sm font-bold text-gray-800")= agent.tasksTotal
+              span(class="text-gray-400 uppercase tracking-wide" style="font-size:10px") Tasks
+            div(class="py-2 text-center border-r border-gray-100")
+              span(class="block font-mono text-sm font-bold text-gray-800") #{agent.successRate}%
+              span(class="text-gray-400 uppercase tracking-wide" style="font-size:10px") Success
+            div(class="py-2 text-center")
+              span(class="block font-mono text-sm font-bold text-gray-800") €#{agent.costToday.toFixed(2)}
+              span(class="text-gray-400 uppercase tracking-wide" style="font-size:10px") Today
+          div(class="flex flex-wrap gap-1")
+            each skill in (agent.skills || []).slice(0,3)
+              span(class="inline-flex items-center gap-1 px-2 bg-gray-100 border border-gray-200 rounded-full text-xs text-gray-600" style="padding-top:2px;padding-bottom:2px")
+                = skill.icon + ' ' + skill.name
+            if (agent.skills || []).length > 3
+              span(class="px-2 bg-gray-100 border border-gray-200 rounded-full text-xs text-gray-400" style="padding-top:2px;padding-bottom:2px") +#{agent.skills.length - 3}
+          div(class="mt-2 pt-2 border-t border-gray-100")
+            a(class="text-xs text-gray-400 hover:text-gray-600 no-underline" href=`/connect?name=${encodeURIComponent(agent.name)}` onclick="event.stopPropagation()") ↓ Get CLAUDE.md
+
+block overlays
+  div(class="modal-backdrop" id="modal-new-agent")
+    div(class="modal p-6")
+      div(class="flex items-center justify-between mb-5")
+        h2(class="text-base font-bold text-gray-900") New agent
+        button(class="text-gray-400 hover:text-gray-600 text-lg" data-modal-close="modal-new-agent") ×
+      form(class="flex flex-col gap-4" id="agent-create-form")
+        div
+          label(class="label") Name
+          input(class="field" type="text" name="name" placeholder="e.g. OpenClaw" required)
+        div
+          label(class="label") Role
+          input(class="field" type="text" name="role" placeholder="e.g. Execution · scraping" required)
+        div
+          label(class="label") Description
+          textarea(class="field" name="description" rows="2" placeholder="What does this agent do?")
+        div
+          label(class="label") Model
+          select(class="field" name="model")
+            option(value="claude-opus-4-6") claude-opus-4-6
+            option(value="claude-sonnet-4-6" selected) claude-sonnet-4-6
+            option(value="claude-haiku-4-5") claude-haiku-4-5
+        div
+          label(class="label") Color
+          select(class="field" name="color")
+            option(value="teal") Teal
+            option(value="amber") Amber
+            option(value="purple") Purple
+            option(value="green") Green
+            option(value="gray") Gray
+        div(class="flex gap-3 pt-1")
+          button(class="btn btn-teal flex-1" type="submit") Create agent
+          button(class="btn btn-ghost" type="button" data-modal-close="modal-new-agent") Cancel
+
+block scripts
+  script.
+    document.getElementById('btn-sync').addEventListener('click', async function() {
+      this.textContent = 'Syncing…';
+      this.disabled = true;
+      try {
+        const r = await fetch('/api/sync', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+          this.textContent = `✓ Synced ${d.agents} agents`;
+          setTimeout(() => location.reload(), 800);
+        } else {
+          this.textContent = '✗ Sync failed';
+          this.disabled = false;
+        }
+      } catch {
+        this.textContent = '✗ Error';
+        this.disabled = false;
+      }
+    });

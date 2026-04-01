@@ -1,0 +1,110 @@
+extends ../layout
+
+block content
+
+  div(class="mb-6")
+    h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Revenue
+    p(class="text-sm text-gray-500") Live from Stripe · cached 5 min · #{accounts.length} account#{accounts.length !== 1 ? 's' : ''}
+
+  if error
+    div(class="card p-5 border border-red-100 max-w-2xl")
+      p(class="text-sm font-semibold text-red-600 mb-1") Stripe connection error
+      p(class="text-sm text-gray-600 mb-4")= error
+      div(class="bg-gray-50 rounded-lg border border-gray-100 px-4 py-3 font-mono text-xs text-gray-700 whitespace-pre")
+        | # .env — add your Stripe accounts like this:
+        |
+        | STRIPE_SECRET_KEY=sk_org_live_...
+        |
+        | # Single account:
+        | STRIPE_ACCOUNT_ID=acct_xxx
+        |
+        | # Multiple accounts (Label:acct_id pairs):
+        | STRIPE_ACCOUNT_IDS=Sponsorgap:acct_xxx,PaperclipHQ:acct_yyy,Growthlist:acct_zzz
+
+  else if metrics
+
+    //- ── Combined totals ──
+    div(class="grid gap-4 mb-5" style="grid-template-columns:repeat(4,1fr)")
+
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-green-50"): span 💵
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900") $#{metrics.mrr.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}
+          span(class="text-xs text-gray-500") MRR (combined)
+
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-teal-50"): span 📈
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900") $#{metrics.arr.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}
+          span(class="text-xs text-gray-500") ARR (combined)
+
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-blue-50"): span ⚡
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900") $#{metrics.dailyRevenue.toFixed(2)}
+          span(class="text-xs text-gray-500") Today (combined)
+
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-purple-50"): span 🤖
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= metrics.activeSubscriptions
+          span(class="text-xs text-gray-500") Active subs (total)
+
+    div(class="grid grid-cols-2 gap-4 mb-5")
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-amber-50"): span 📉
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= metrics.churnRate + '%'
+          span(class="text-xs text-gray-500") Churn this month
+
+      div(class="card p-4 flex items-center gap-3")
+        div(class="stat-icon bg-green-50"): span 🚀
+        div
+          span(class="block font-mono text-lg font-bold text-gray-900")= metrics.growthRate
+          span(class="text-xs text-gray-500") MRR growth vs last month
+
+    //- ── Per-account breakdown ──
+    if metrics.accounts.length > 1
+      div(class="card mb-5")
+        div(class="card-header"): span(class="card-title") By project
+        div(class="divide-y divide-gray-50")
+          each acct in metrics.accounts
+            div(class="flex items-center gap-4 px-4 py-3")
+              div(class="flex-1")
+                span(class="text-sm font-medium text-gray-800")= acct.label
+                span(class="text-xs text-gray-400 ml-2 font-mono")= acct.accountId
+              div(class="text-right grid gap-4" style="grid-template-columns:repeat(4,100px)")
+                div
+                  span(class="block font-mono text-sm font-semibold text-gray-900") $#{acct.mrr.toLocaleString('en-US',{maximumFractionDigits:0})}
+                  span(class="text-xs text-gray-400") MRR
+                div
+                  span(class="block font-mono text-sm font-semibold text-gray-900") $#{acct.arr.toLocaleString('en-US',{maximumFractionDigits:0})}
+                  span(class="text-xs text-gray-400") ARR
+                div
+                  span(class="block font-mono text-sm font-semibold text-gray-900")= acct.activeSubscriptions
+                  span(class="text-xs text-gray-400") subs
+                div
+                  span(class="block font-mono text-sm font-semibold text-gray-900")= acct.churnRate + '%'
+                  span(class="text-xs text-gray-400") churn
+
+    //- ── Recent transactions ──
+    div(class="card")
+      div(class="card-header")
+        span(class="card-title") Recent transactions
+        span(class="text-xs font-mono text-gray-400") today · all accounts
+      if metrics.recent.length === 0
+        div(class="p-8 text-center text-sm text-gray-400") No charges today yet.
+      else
+        div(class="divide-y divide-gray-50")
+          each tx in metrics.recent
+            div(class="flex items-center gap-3 px-4 py-3")
+              div(class="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600 text-sm flex-shrink-0") $
+              div(class="flex-1 min-w-0")
+                p(class="text-sm font-medium text-gray-800 truncate")= tx.description
+                div(class="flex items-center gap-2 text-xs text-gray-400 font-mono")
+                  span= tx.date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                  if metrics.accounts.length > 1
+                    span(class="px-1.5 py-0.5 rounded text-xs" style="background:#f1f5f9")= tx.account
+              div(class="text-right flex-shrink-0")
+                span(class="font-mono text-sm font-semibold text-gray-900") $#{tx.amount.toFixed(2)}
+                span(class="block text-xs text-gray-400")= tx.currency

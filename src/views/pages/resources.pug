@@ -1,0 +1,113 @@
+extends ../layout
+
+block content
+
+  div(class="mb-6")
+    h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Resources
+    p(class="text-sm text-gray-500") Connect your knowledge base, docs, and external tools
+
+  div(class="grid grid-cols-2 gap-5 mb-6")
+
+    div(class="card flex flex-col")
+      div(class="card-header")
+        div(class="flex items-center gap-2 text-sm font-semibold text-gray-800")
+          span 🧠
+          span Brain
+        button(class="btn btn-teal text-xs" onclick="toggleResForm('form-brain')") + Add page
+
+      div(class="hidden border-b border-gray-100 px-4 py-3 flex flex-col gap-2" id="form-brain")
+        input(class="field" id="brain-title" placeholder="Title (e.g. Agent prompts)")
+        input(class="field" id="brain-url"   placeholder="https://notion.so/…")
+        div(class="flex gap-2")
+          button(class="btn btn-teal flex-1 text-xs" onclick="submitRes('brain')") Save
+          button(class="btn btn-ghost text-xs" onclick="toggleResForm('form-brain')") Cancel
+
+      div(class="p-3 flex flex-col gap-1" id="brain-list")
+        if brain.length === 0
+          p(class="text-xs text-gray-400 px-2 py-3") No brain links yet.
+        each r in brain
+          div(class="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-lg hover:border-gray-300 transition-colors group" data-id=r._id.toString())
+            span(class="text-sm w-5 text-center flex-shrink-0")= r.icon
+            div(class="flex-1 min-w-0")
+              span(class="text-sm font-medium text-gray-800 block truncate")= r.title
+              span(class="font-mono text-gray-400" style="font-size:10px")= r.url.replace(/https?:\/\//, '').slice(0, 42)
+            span(class=`res-badge res-badge-${r.badge.toLowerCase()}`)= r.badge
+            button(class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs ml-1 transition-opacity" onclick=`deleteResource('${r._id}',this)`) ✕
+        button(class="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:text-brand-teal transition-colors w-full mt-1" style="border-color:inherit" onmouseover="this.style.borderColor='#14b8a6';this.style.color='#14b8a6'" onmouseout="this.style.borderColor='';this.style.color=''" onclick="toggleResForm('form-brain')") + Connect Notion page
+
+    div(class="card flex flex-col")
+      div(class="card-header")
+        div(class="flex items-center gap-2 text-sm font-semibold text-gray-800")
+          span 📁
+          span Docs & Files
+        button(class="btn btn-teal text-xs" onclick="toggleResForm('form-docs')") + Add file
+
+      div(class="hidden border-b border-gray-100 px-4 py-3 flex flex-col gap-2" id="form-docs")
+        input(class="field" id="docs-title" placeholder="Title (e.g. Q1 Report)")
+        input(class="field" id="docs-url"   placeholder="https://drive.google.com/…")
+        div(class="flex gap-2")
+          button(class="btn btn-teal flex-1 text-xs" onclick="submitRes('docs')") Save
+          button(class="btn btn-ghost text-xs" onclick="toggleResForm('form-docs')") Cancel
+
+      div(class="p-3 flex flex-col gap-1" id="docs-list")
+        if docs.length === 0
+          p(class="text-xs text-gray-400 px-2 py-3") No doc links yet.
+        each r in docs
+          div(class="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-lg hover:border-gray-300 transition-colors group" data-id=r._id.toString())
+            span(class="text-sm w-5 text-center flex-shrink-0")= r.icon
+            div(class="flex-1 min-w-0")
+              span(class="text-sm font-medium text-gray-800 block truncate")= r.title
+              span(class="font-mono text-gray-400" style="font-size:10px")= r.url.replace(/https?:\/\//, '').slice(0, 42)
+            span(class=`res-badge res-badge-${r.badge.toLowerCase()}`)= r.badge
+            button(class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs ml-1 transition-opacity" onclick=`deleteResource('${r._id}',this)`) ✕
+        button(class="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-400 w-full mt-1 transition-colors" onmouseover="this.style.borderColor='#14b8a6';this.style.color='#14b8a6'" onmouseout="this.style.borderColor='';this.style.color=''" onclick="toggleResForm('form-docs')") + Add doc or repo
+
+  h2(class="text-sm font-semibold text-gray-700 mb-3") Integrations
+  div(class="card divide-y divide-gray-50")
+  -
+    var integrations = [
+      {icon:'📝',name:'Notion',         desc:'Knowledge base, SOPs, agent prompts',   connected:true},
+      {icon:'📁',name:'Google Drive',   desc:'File storage for agent outputs',         connected:true},
+      {icon:'⚙',name:'GitHub',          desc:'Code repos for all SaaS products',      connected:true},
+      {icon:'💬',name:'Slack/Asibot',   desc:'Agent notifications and commands',       connected:true},
+      {icon:'💳',name:'Stripe',         desc:'Revenue tracking across all products',   connected:true},
+      {icon:'📈',name:'Plausible',      desc:'Traffic and conversion analytics',      connected:false},
+    ]
+  h2(class="text-sm font-semibold text-gray-700 mb-3") Integrations
+  div(class="card divide-y divide-gray-50")
+    each int in integrations
+      div(class="flex items-center gap-3 px-4 py-3")
+        div(class="w-9 h-9 rounded-lg bg-main-bg border border-gray-200 flex items-center justify-center text-base flex-shrink-0")= int.icon
+        div(class="flex-1")
+          div(class="text-sm font-semibold text-gray-800")= int.name
+          div(class="text-xs text-gray-500")= int.desc
+        div(class=`flex items-center gap-1 text-xs font-medium${int.connected ? ' text-green-500' : ' text-gray-400'}`)
+          span(class="w-2 h-2 rounded-full bg-current")
+          = int.connected ? 'Connected' : 'Not connected'
+        if !int.connected
+          button(class="btn btn-ghost text-xs ml-2") Connect
+
+block scripts
+  script.
+    function toggleResForm(id) {
+      document.getElementById(id).classList.toggle('hidden');
+    }
+    async function submitRes(type) {
+      var t = document.getElementById(type+'-title').value.trim();
+      var u = document.getElementById(type+'-url').value.trim();
+      if (!t || !u) return;
+      var res = await fetch('/resources', {
+        method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body: JSON.stringify({type,title:t,url:u}),
+      }).then(r=>r.json());
+      if (res.ok) {
+        var list = document.getElementById(type+'-list');
+        var badgeMap = {Notion:'res-badge-notion',GitHub:'res-badge-github',Drive:'res-badge-drive',GDocs:'res-badge-drive',Link:'res-badge-link'};
+        var bc = badgeMap[res.resource.badge] || 'res-badge-link';
+        var short = u.replace(/https?:\/\//,'').slice(0,42);
+        list.insertAdjacentHTML('afterbegin','<div class="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-lg hover:border-gray-300 transition-colors group" data-id="'+res.resource._id+'"><span class="text-sm w-5 text-center flex-shrink-0">'+res.resource.icon+'</span><div class="flex-1 min-w-0"><span class="text-sm font-medium text-gray-800 block truncate">'+t+'</span><span class="font-mono text-gray-400" style="font-size:10px">'+short+'</span></div><span class="res-badge '+bc+'">'+res.resource.badge+'</span><button onclick="deleteResource(\''+res.resource._id+'\',this)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs ml-1 transition-opacity">✕</button></div>');
+        document.getElementById(type+'-title').value='';
+        document.getElementById(type+'-url').value='';
+        document.getElementById('form-'+type).classList.add('hidden');
+      }
+    }

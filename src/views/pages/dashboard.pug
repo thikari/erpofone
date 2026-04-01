@@ -1,0 +1,121 @@
+extends ../layout
+include ../partials/agent-avatar
+
+block scripts
+  script.
+    (function () {
+      const es = new EventSource('/api/live');
+
+      es.addEventListener('agent:update', e => {
+        const a = JSON.parse(e.data);
+        // Update cost display for this agent
+        document.querySelectorAll('[data-agent-id="' + a._id + '"]').forEach(row => {
+          const costEl = row.querySelector('[data-cost]');
+          if (costEl) costEl.textContent = '$' + (a.costToday || 0).toFixed(4);
+          const pillEl = row.querySelector('[data-status]');
+          if (pillEl && a.status) {
+            pillEl.className = pillEl.className.replace(/pill-\w+/, 'pill-' + a.status);
+            const dot = pillEl.querySelector('.sdot');
+            if (dot) {
+              dot.className = 'sdot' + (a.status === 'running' ? ' sdot-blink' : '');
+            }
+            const txt = pillEl.querySelector('[data-status-txt]');
+            if (txt) txt.textContent = ' ' + a.status;
+          }
+        });
+        // Refresh today cost tile
+        fetch('/api/sync', { method: 'POST' }).catch(() => {});
+      });
+
+      es.addEventListener('activity:new', e => {
+        const ev = JSON.parse(e.data);
+        const list = document.getElementById('activity-list');
+        if (!list) return;
+        const colors = { teal:'av-teal', amber:'av-amber', purple:'av-purple', green:'av-green', gray:'av-gray' };
+        const time = new Date(ev.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const row = document.createElement('div');
+        row.className = 'flex items-start gap-2 px-4 py-3 border-b border-gray-50';
+        row.innerHTML = `
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${colors[ev.color] || 'av-teal'}" style="font-size:10px">${ev.initials}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs text-gray-700 leading-relaxed" style="margin-bottom:2px">${ev.action}</p>
+            <div class="flex items-center gap-2 font-mono text-gray-400" style="font-size:10px"><span>${time}</span></div>
+          </div>`;
+        list.prepend(row);
+        // Trim to 10 rows
+        while (list.children.length > 10) list.removeChild(list.lastChild);
+      });
+
+      es.onerror = () => { /* reconnect is automatic */ };
+    })();
+
+block content
+
+  div(class="mb-6")
+    h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Dashboard
+    p(class="text-sm text-gray-500")= `${runningCount} agent${runningCount !== 1 ? 's' : ''} active`
+
+  div(class="grid grid-cols-3 gap-4 mb-6")
+
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-teal-50"): span 💰
+      div
+        span(class="block font-mono text-lg font-bold text-gray-900") $#{todayCost}
+        span(class="text-xs text-gray-500") Cost today
+
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-blue-50"): span ⚡
+      div
+        span(class="block font-mono text-lg font-bold text-gray-900")= todayTokens
+        span(class="text-xs text-gray-500") Tokens today
+
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-amber-50"): span 🤖
+      div
+        span(class="block font-mono text-lg font-bold text-gray-900") #{runningCount} / #{agents.length}
+        span(class="text-xs text-gray-500") Agents running
+
+  div(class="grid grid-cols-3 gap-5")
+
+    div(class="col-span-2")
+      div(class="card")
+        div(class="card-header")
+          span(class="card-title") Agents
+          a(class="text-xs font-medium" style="color:#14b8a6" href="/agents") View all →
+        if agents.length === 0
+          div(class="card-body text-sm text-gray-400") No agents yet.
+            a(style="color:#14b8a6" href="/agents") Add one →
+        else
+          div(class="divide-y divide-gray-50")
+            each agent in agents
+              a(class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors no-underline" href=`/agents/${agent._id}` data-agent-id=`${agent._id}`)
+                div(class=`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 av-${agent.color}`)= agent.initials
+                div(class="flex-1 min-w-0")
+                  div(class="flex items-center gap-2")
+                    span(class="text-sm font-medium text-gray-800")= agent.name
+                    span(class=`pill pill-${agent.status}` data-status)
+                      span(class=`sdot${agent.status === 'running' ? ' sdot-blink' : ''}`)
+                      span(data-status-txt)= ' ' + agent.status
+                  p(class="text-xs text-gray-400 truncate")= agent.currentTask || agent.role
+                div(class="text-right")
+                  span(class="block font-mono text-xs font-semibold text-gray-700" data-cost) $#{agent.costToday.toFixed(4)}
+                  span(class="text-gray-400" style="font-size:10px") today
+
+    div(class="col-span-1")
+      div(class="card")
+        div(class="card-header")
+          span(class="card-title") Recent activity
+          a(class="text-xs font-medium" style="color:#14b8a6" href="/activity") View all →
+        div(class="divide-y divide-gray-50" id="activity-list")
+          if recentActivity.length === 0
+            div(class="p-4 text-sm text-gray-400") No activity yet. Run a sync to import agent history.
+          else
+            each ev in recentActivity
+              div(class="flex items-start gap-2 px-4 py-3")
+                div(class=`w-7 h-7 rounded-lg flex items-center justify-center font-bold flex-shrink-0 av-${ev.color}` style="font-size:10px")= ev.initials
+                div(class="flex-1 min-w-0")
+                  p(class="text-xs text-gray-700 leading-relaxed" style="margin-bottom:2px")= ev.action
+                  div(class="flex items-center gap-2 font-mono text-gray-400" style="font-size:10px")
+                    span= new Date(ev.createdAt).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+                    if ev.tokens
+                      span= (ev.tokens >= 1000 ? Math.round(ev.tokens/1000)+'K' : ev.tokens) + ' tok'

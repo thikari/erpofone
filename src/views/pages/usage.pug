@@ -1,0 +1,122 @@
+extends ../layout
+
+block content
+
+  div(class="flex items-center justify-between mb-6")
+    div
+      h1(class="text-2xl font-bold text-gray-900 tracking-tight" style="margin-bottom:2px") Usage & Costs
+      p(class="text-sm text-gray-500")= periodLabel
+    div(class="period-tabs")
+      each p in [{val:'today',label:'Today'},{val:'week',label:'This Week'},{val:'month',label:'This Month'},{val:'year',label:'This Year'}]
+        button(class=`period-tab${period===p.val?' active':''}` data-period=p.val)= p.label
+
+  div(class="grid grid-cols-4 gap-4 mb-5")
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-teal-50"): span 💰
+      div
+        span(class="block font-mono text-xl font-bold text-gray-900")= totals.cost
+        span(class="text-xs text-gray-500") Total Cost
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-blue-50"): span ⚡
+      div
+        span(class="block font-mono text-xl font-bold text-gray-900")= totals.tokens
+        span(class="text-xs text-gray-500") Total Tokens
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-amber-50"): span 💬
+      div
+        span(class="block font-mono text-xl font-bold text-gray-900")= totals.tasks
+        span(class="text-xs text-gray-500") Tasks
+    div(class="card p-4 flex items-center gap-3")
+      div(class="stat-icon bg-purple-50"): span 📈
+      div
+        span(class="block font-mono text-xl font-bold text-gray-900")= byAgent.length
+        span(class="text-xs text-gray-500") Agents active
+
+  div(class="card mb-5")
+    div(class="card-header")
+      span(class="card-title") Cost over time
+    div(class="p-4" style="height:220px;position:relative")
+      canvas(id="usage-chart")
+
+  div(class="grid grid-cols-2 gap-5")
+
+    div(class="card")
+      div(class="card-header"): span(class="card-title") By Agent
+      table(class="data-table")
+        thead
+          tr
+            th Agent
+            th(class="r") Cost
+            th(style="min-width:100px") %
+            th(class="r") Tokens
+        tbody
+          if byAgent.length === 0
+            tr: td(colspan="4" class="text-center text-gray-400 py-8 text-sm") No data yet.
+          each a in byAgent
+            tr
+              td
+                div(class="flex items-center gap-2")
+                  div(class=`w-6 h-6 rounded-md flex items-center justify-center font-bold av-${a.color}` style="font-size:10px")= a.name.slice(0,2).toUpperCase()
+                  span= a.name
+              td(class="r")= a.costFmt
+              td
+                div(class="flex items-center gap-2")
+                  div(style=`height:4px;flex:1;background:#f0f1f8;border-radius:2px;overflow:hidden`)
+                    div(style=`height:100%;border-radius:2px;background:#3b82f6;width:${a.pct}%`)
+                  span(class="font-mono text-xs text-gray-400 text-right" style="min-width:36px") #{a.pct}%
+              td(class="r")= a.tokensFmt
+
+    div(class="card")
+      div(class="card-header"): span(class="card-title") By Model
+      table(class="data-table")
+        thead
+          tr
+            th Model
+            th(class="r") Cost
+            th(style="min-width:100px") %
+            th(class="r") Tokens
+        tbody
+          if byModel.length === 0
+            tr: td(colspan="4" class="text-center text-gray-400 py-8 text-sm") No data yet.
+          each m in byModel
+            -
+              var modelColors = {'claude-opus-4-6':'#14b8a6','claude-sonnet-4-6':'#3b82f6','claude-haiku-4-5':'#10b981'}
+              var barColor = modelColors[m.model] || '#9ca3af'
+            tr
+              td: span(class="font-mono text-xs")= m.model
+              td(class="r")= m.costFmt
+              td
+                div(class="flex items-center gap-2")
+                  div(style=`height:4px;flex:1;background:#f0f1f8;border-radius:2px;overflow:hidden`)
+                    div(style=`height:100%;border-radius:2px;background:${barColor};width:${m.pct}%`)
+                  span(class="font-mono text-xs text-gray-400 text-right" style="min-width:36px") #{m.pct}%
+              td(class="r")= m.tokensFmt
+
+block scripts
+  script.
+    var CHART_LABELS = !{JSON.stringify(chartLabels)};
+    var CHART_DATA   = !{JSON.stringify(chartData)};
+    (function() {
+      var ctx = document.getElementById('usage-chart');
+      if (!ctx) return;
+      new Chart(ctx.getContext('2d'), {
+        type:'bar',
+        data:{
+          labels: CHART_LABELS,
+          datasets:[{data:CHART_DATA,backgroundColor:'rgba(59,130,246,0.42)',hoverBackgroundColor:'rgba(59,130,246,0.65)',borderRadius:5,borderSkipped:false}],
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2030',titleColor:'#9ca3af',bodyColor:'#e2e4ef',padding:10,callbacks:{label:function(c){return ' \u20ac'+c.parsed.y.toFixed(2);}}}},
+          scales:{
+            x:{grid:{display:false},border:{display:false},ticks:{color:'#9ca3af',font:{size:11},maxTicksLimit:10}},
+            y:{grid:{color:'#f0f1f8'},border:{display:false},ticks:{color:'#9ca3af',font:{size:11},callback:function(v){return '\u20ac'+v;}}},
+          },
+        },
+      });
+    })();
+    document.querySelectorAll('[data-period]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        window.location.href = '/usage?period=' + btn.dataset.period;
+      });
+    });
