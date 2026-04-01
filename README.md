@@ -1,4 +1,4 @@
-# PaperclipHQ
+# ErpofOne
 
 Solopreneur AI Agent Command Center — Node.js · Express · Pug · Tailwind CSS · MongoDB
 
@@ -12,7 +12,7 @@ Solopreneur AI Agent Command Center — Node.js · Express · Pug · Tailwind CS
 
 ### 1. Clone & install
 ```bash
-cd paperclip-hq
+cd erpofone
 npm install
 ```
 
@@ -58,7 +58,7 @@ Open → http://localhost:3000
 
 ## Project structure
 ```
-paperclip-hq/
+erpofone/
 ├── server.js                   # Entry point
 ├── src/
 │   ├── app.js                  # Express app setup
@@ -123,4 +123,4 @@ paperclip-hq/
 - Connect Stripe webhooks to update MRR on the dashboard
 - Add Slack webhook for agent notifications
 - Add authentication (Passport.js or simple session auth)
-- Deploy to your Mogli VPS: `pm2 start server.js --name paperclip-hq`
+- Deploy to your Mogli VPS: `pm2 start server.js --name erpofone`

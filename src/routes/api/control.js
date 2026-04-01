@@ -22,7 +22,7 @@ router.post('/task', async (req, res) => {
   const { agentId, agentName, title, description = '', companyId, papAgentId } = req.body;
   if (!title || !agentName) return res.status(400).json({ ok: false, error: 'title and agentName required' });
 
-  // Save task in paperclip-hq
+  // Save task in erpofone
   const task = await Task.create({
     title,
     agent:     agentId || null,

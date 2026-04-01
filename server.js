@@ -9,7 +9,7 @@ connectDB().then(() => {
   require('./src/lib/watcher').start().catch(err => console.error('[watcher] startup error:', err.message));
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 PaperclipHQ running → http://localhost:${PORT}`);
+    console.log(`\n🚀 ErpofOne running → http://localhost:${PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   MongoDB: connected\n`);
   });

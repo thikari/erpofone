@@ -1,7 +1,7 @@
 {
-  "name": "paperclip-hq",
+  "name": "erpofone",
   "version": "1.0.0",
-  "description": "PaperclipHQ — Solopreneur AI Agent Command Center",
+  "description": "ErpofOne — Solopreneur AI Agent Command Center",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

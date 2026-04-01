@@ -1,7 +1,7 @@
 /**
  * Stripe metrics — supports one or multiple accounts.
  * Set STRIPE_ACCOUNT_IDS as comma-separated list of "Label:acct_xxx" pairs, e.g.:
- *   STRIPE_ACCOUNT_IDS=Sponsorgap:acct_abc,PaperclipHQ:acct_def
+ *   STRIPE_ACCOUNT_IDS=Sponsorgap:acct_abc,ErpofOne:acct_def
  * Falls back to STRIPE_ACCOUNT_ID (single account) if the multi-account var isn't set.
  *
  * Results cached per account for 5 minutes.

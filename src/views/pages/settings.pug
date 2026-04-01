@@ -21,7 +21,7 @@ block content
         div(class="card-body flex flex-col gap-4")
           div
             label(class="label") Workspace name
-            input(class="field" type="text" value="TR INC")
+            input(class="field" type="text" value="ErpofOne")
           div
             label(class="label") Default model
             select(class="field")
@@ -165,14 +165,14 @@ block content
         div(class="card-body")
           p(class="text-xs text-gray-500 mb-3") Drop this into your OpenClaw agent. Replace the token and base URL.
           pre(class="bg-gray-900 text-green-400 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed" style="font-size:11px").
-            // paperclip.js — add to your OpenClaw agent
-            const PAPERCLIP_URL   = 'http://localhost:3000';
-            const PAPERCLIP_TOKEN = 'YOUR_INGEST_TOKEN_HERE';
+            // erpofone.js — add to your OpenClaw agent
+            const ERPOFONE_URL   = 'http://localhost:3000';
+            const ERPOFONE_TOKEN = 'YOUR_INGEST_TOKEN_HERE';
 
             async function log(endpoint, body) {
-              await fetch(`${PAPERCLIP_URL}/api/ingest/${endpoint}`, {
+              await fetch(`${ERPOFONE_URL}/api/ingest/${endpoint}`, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ERPOFONE_TOKEN}` },
                 body:    JSON.stringify(body),
               }).catch(() => {}); // fire and forget
             }
@@ -195,16 +195,16 @@ block content
             });
 
             // Create a task (returns taskId)
-            const { taskId } = await fetch(`${PAPERCLIP_URL}/api/ingest/task`, {
+            const { taskId } = await fetch(`${ERPOFONE_URL}/api/ingest/task`, {
               method:  'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ERPOFONE_TOKEN}` },
               body:    JSON.stringify({ agentName: 'OpenClaw', title: 'Scraping 48 newsletters', status: 'running' }),
             }).then(r => r.json());
 
             // Later — mark it done
-            await fetch(`${PAPERCLIP_URL}/api/ingest/task/${taskId}`, {
+            await fetch(`${ERPOFONE_URL}/api/ingest/task/${taskId}`, {
               method:  'PATCH',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${PAPERCLIP_TOKEN}` },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ERPOFONE_TOKEN}` },
               body:    JSON.stringify({ status: 'done', progress: 100, tokens: 150000, cost: 0.07, result: '1,240 sponsors indexed' }),
             });
 
@@ -251,7 +251,7 @@ block overlays
         div(class="flex items-center gap-2 mb-4")
           input(id="token-value-display" class="field font-mono text-xs flex-1" type="text" readonly)
           button(class="btn btn-ghost text-xs flex-shrink-0" id="token-copy-btn") Copy
-        p(class="text-xs text-gray-400 mb-4") Add it to your agent as the #[code.bg-gray-100.px-1.rounded PAPERCLIP_TOKEN] constant.
+        p(class="text-xs text-gray-400 mb-4") Add it to your agent as the #[code.bg-gray-100.px-1.rounded ERPOFONE_TOKEN] constant.
         button(class="btn btn-teal w-full" data-modal-close="modal-add-token" id="token-done-btn") Done
 
   div(class="modal-backdrop" id="modal-add-key")

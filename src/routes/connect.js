@@ -55,14 +55,14 @@ router.get('/system-prompt', (req, res) => {
 
   const content = buildSystemPrompt(name, token, hqUrl);
   res.setHeader('Content-Type', 'text/plain');
-  res.setHeader('Content-Disposition', `attachment; filename="paperclip-system-prompt.txt"`);
+  res.setHeader('Content-Disposition', `attachment; filename="erpofone-system-prompt.txt"`);
   res.send(content);
 });
 
 function buildSystemPrompt(agentName, token, hqUrl) {
-  return `## Dashboard connection — PaperclipHQ
+  return `## Dashboard connection — ErpofOne
 
-You are connected to the PaperclipHQ agent dashboard at ${hqUrl}.
+You are connected to the ErpofOne agent dashboard at ${hqUrl}.
 Your agent name is: ${agentName}
 
 After each significant action, report it to the dashboard using a tool call or shell command:
@@ -97,7 +97,7 @@ Rules:
 function buildClaudeMd(agentName, token, hqUrl) {
   return `# Agent Dashboard Connection
 
-You are connected to the paperclip-hq dashboard at ${hqUrl}.
+You are connected to the erpofone dashboard at ${hqUrl}.
 
 ## Reporting instructions
 

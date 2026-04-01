@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   PaperclipHQ — main.js
+   ErpofOne — main.js
    All client-side interactions
 ═══════════════════════════════════════════════ */
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # report.sh — one-liner hook for any Claude Code / OpenClaw agent
 #
-# POST an activity event to paperclip-hq from any agent session.
+# POST an activity event to erpofone from any agent session.
 # Drop this in an agent's workspace or call it from a Claude Code hook.
 #
 # Usage:

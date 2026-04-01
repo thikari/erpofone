@@ -55,7 +55,7 @@ router.post('/register', async (req, res) => {
 });
 
 function buildQuickstart(agentName, token, hqUrl) {
-  return `# PaperclipHQ — reporting instructions
+  return `# ErpofOne — reporting instructions
 
 Agent name : ${agentName}
 Dashboard  : ${hqUrl}

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * add-agent.js  — register any OpenClaw or Hermes agent in paperclip-hq
+ * add-agent.js  — register any OpenClaw or Hermes agent in erpofone
  *
  * Usage:
  *   node scripts/add-agent.js "Hermes" "Outreach"
@@ -30,7 +30,7 @@ async function main() {
     process.exit(1);
   }
 
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/paperclip-hq';
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/erpofone';
   await mongoose.connect(uri);
 
   // Create or update agent
@@ -90,12 +90,12 @@ OPTION C — shell env var (simplest)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Export these in the shell where you run the agent:
 
-  export PAPERCLIP_HQ_URL="${hqUrl}"
-  export PAPERCLIP_HQ_TOKEN="${token}"
-  export PAPERCLIP_HQ_AGENT="${name}"
+  export ERPOFONE_URL="${hqUrl}"
+  export ERPOFONE_TOKEN="${token}"
+  export ERPOFONE_AGENT="${name}"
 
 Then call scripts/report.sh from anywhere:
-  /path/to/paperclip-hq/scripts/report.sh "${name}" "did something"
+  /path/to/erpofone/scripts/report.sh "${name}" "did something"
 `);
 }
 

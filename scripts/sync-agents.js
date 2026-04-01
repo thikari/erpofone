@@ -2,7 +2,7 @@
  * sync-agents.js
  *
  * Reads live Paperclip agent workspaces + Claude Code session history
- * and upserts agents, usage logs, and tasks into paperclip-hq's MongoDB.
+ * and upserts agents, usage logs, and tasks into erpofone's MongoDB.
  *
  * Run:  node scripts/sync-agents.js
  * Cron: add `node /path/to/sync-agents.js >> /tmp/sync.log 2>&1` to crontab
@@ -210,7 +210,7 @@ function parseSession(filePath) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function sync() {
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/paperclip-hq';
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/erpofone';
   await mongoose.connect(uri);
   console.log(`[sync] Connected to MongoDB → ${uri}`);
 

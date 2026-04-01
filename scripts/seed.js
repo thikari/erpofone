@@ -1,5 +1,5 @@
 /**
- * PaperclipHQ — Seed Script
+ * ErpofOne — Seed Script
  * Run: npm run seed
  *
  * Seeds infrastructure data only (skills, tools, resources).
@@ -13,10 +13,10 @@ const Skill     = require('../src/models/Skill');
 const Resource  = require('../src/models/Resource');
 const Tool      = require('../src/models/Tool');
 
-const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/paperclip-hq';
+const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/erpofone';
 
 async function seed() {
-  console.log('\n🌱  Seeding PaperclipHQ…');
+  console.log('\n🌱  Seeding ErpofOne…');
   await mongoose.connect(URI);
 
   // ── Wipe infrastructure only (not agents/tasks/activity/usage) ──
